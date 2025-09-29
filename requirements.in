@@ -1,0 +1,14 @@
+# Framework
+Django>=5.0,<6.0
+
+# Config con .env (facoltativo ma consigliato)
+django-environ>=0.11
+
+# Statici in produzione semplice (anche con Passenger/nginx)
+whitenoise>=6.6
+
+# Dev (facoltativo)
+django-debug-toolbar>=4.4
+
+# Immagini (se usi <img> caricati dal modello/admin)
+Pillow>=10.2

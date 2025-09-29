@@ -1,0 +1,66 @@
+{% load static %}
+<!doctype html>
+<html lang="it">
+<head>
+  <!-- meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="">
+  <meta name="keywords" content="">
+
+  <title>{% block title %}Tixy{% endblock %}</title>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/x-icon" href="{% static 'assets/img/logo/faviconOld.png' %}">
+
+  <!-- css (dalla tua index) -->
+  <link rel="stylesheet" href="{% static 'assets/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/all-fontawesome.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/icomoon.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/animate.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/magnific-popup.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/owl.carousel.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body class="{% block body_class %}home-4{% endblock %}">
+  <!-- preloader -->
+  <div class="preloader">
+    <div class="loader-ripple">
+      <div></div><div></div>
+    </div>
+  </div>
+
+  <!-- header -->
+  {% block header %}{% include 'web/partials/header.html' %}{% endblock %}
+
+  <!-- contenuto -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- footer -->
+  {% block footer %}{% include 'web/partials/footer.html' %}{% endblock %}
+
+  <!-- scroll-top -->
+  <a href="#" id="scroll-top"><i class="far fa-arrow-up-from-arc"></i></a>
+
+  <!-- js (ordine come nella tua index) -->
+  <script src="{% static 'assets/js/jquery-3.7.1.min.js' %}"></script>
+  <script src="{% static 'assets/js/modernizr.min.js' %}"></script>
+  <script src="{% static 'assets/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'assets/js/imagesloaded.pkgd.min.js' %}"></script>
+  <script src="{% static 'assets/js/jquery.magnific-popup.min.js' %}"></script>
+  <script src="{% static 'assets/js/isotope.pkgd.min.js' %}"></script>
+  <script src="{% static 'assets/js/jquery.appear.min.js' %}"></script>
+  <script src="{% static 'assets/js/jquery.easing.min.js' %}"></script>
+  <script src="{% static 'assets/js/owl.carousel.min.js' %}"></script>
+  <script src="{% static 'assets/js/counter-up.js' %}"></script>
+  <script src="{% static 'assets/js/wow.min.js' %}"></script>
+  <script src="{% static 'assets/js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

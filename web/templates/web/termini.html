@@ -1,0 +1,183 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Termini | Tixy{% endblock %}
+
+{% block content %}
+<!-- breadcrumb -->
+{% with bc='assets/img/breadcrumb/01.jpg' %}
+<div class="site-breadcrumb"
+     style="background-image:url('{% static bc %}')">
+
+
+  <div class="container">
+    <h2 class="breadcrumb-title">Termini e Condizioni</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Termini e Condizioni</li>
+    </ul>
+  </div>
+</div>
+{% endwith %}
+<!-- breadcrumb end -->
+  <main class="main">
+
+            <!-- terms of service -->
+            <div class="terms-service py-80">
+                <div class="container">
+                    <div class="row">
+                        <div class="col">
+                            <!-- 1 -->
+                            <div class="terms-content">
+                                <h3>1. Premesse</h3>
+                                <p>
+                                    Il presente documento disciplina i termini e le condizioni generali di utilizzo della piattaforma digitale
+                                    "Tixy", di titolarità esclusiva di Tixy SRLS, con sede legale in Roma, Via [Inserire Indirizzo], P.IVA
+                                    16517571002. Tixy SRLS opera in qualità di fornitore di una piattaforma tecnologica che consente la
+                                    compravendita tra privati di biglietti per eventi e la sottoscrizione di un servizio di notifiche in
+                                    abbonamento per la segnalazione di nuove disponibilità ufficiali di biglietti per eventi esauriti.
+                                </p>
+                            </div>
+
+                            <!-- 2 -->
+                            <div class="terms-content">
+                                <h3>2. Oggetto del Contratto</h3>
+                                <p>
+                                    Il presente contratto ha per oggetto la regolamentazione dell’accesso e dell’utilizzo da parte dell’Utente
+                                    della piattaforma Tixy, ivi inclusi i servizi di intermediazione per la compravendita di biglietti tra
+                                    privati e l’erogazione di servizi informativi tramite notifiche automatizzate. L’Utente dichiara di essere
+                                    maggiorenne e di utilizzare i servizi esclusivamente per finalità lecite e conformi alla normativa vigente.
+                                </p>
+                            </div>
+
+                            <!-- 3 -->
+                            <div class="terms-content">
+                                <h3>3. Registrazione e Accesso alla Piattaforma</h3>
+                                <p>
+                                    L’Utente si impegna a fornire dati veritieri, aggiornati e completi al momento della registrazione. Tixy
+                                    SRLS si riserva il diritto di sospendere o eliminare un account qualora ritenga, a suo insindacabile
+                                    giudizio, che le informazioni fornite siano false o in violazione dei presenti Termini.
+                                </p>
+                            </div>
+
+                            <!-- 4 -->
+                            <div class="terms-content">
+                                <h3>4. Compravendita di Biglietti</h3>
+                                <p>
+                                    La piattaforma Tixy consente agli utenti di vendere e acquistare biglietti per eventi in modo conforme
+                                    all’art. 1 della Legge 23 luglio 2021, n. 106. I biglietti devono essere autentici, validi e trasferibili.
+                                    Il Venditore ha l’obbligo di caricare biglietti conformi alla descrizione fornita. La conferma della
+                                    transazione da parte del Venditore deve avvenire entro 12 ore dall’ordine. Decorso tale termine senza
+                                    risposta, l’ordine si intende annullato e l’importo versato viene rimborsato all’Acquirente.
+                                </p>
+                            </div>
+
+                            <!-- 5 -->
+                            <div class="terms-content">
+                                <h3>5. Prezzi e Commissioni</h3>
+                                <p>
+                                    Tixy SRLS applica commissioni pari al 10% sul prezzo di vendita per l’Acquirente, con un minimo di
+                                    &euro;4,00 e un massimo di &euro;50,00. In caso di attivazione dell’opzione promozionale “Boost”, la
+                                    commissione si riduce al 5%. Per i Venditori, è prevista una commissione standard del 2%, estendibile fino
+                                    al 10% con l’utilizzo di servizi opzionali a pagamento.
+                                </p>
+                            </div>
+
+                            <!-- 6 -->
+                            <div class="terms-content">
+                                <h3>6. Modalità di Pagamento</h3>
+                                <p>
+                                    I pagamenti sulla piattaforma avvengono tramite metodi sicuri: carta di credito e PayPal. L’importo viene
+                                    trattenuto da un gestore di pagamento terzo autorizzato fino alla conferma dell’avvenuta consegna del
+                                    biglietto o validità del medesimo. I fondi vengono accreditati al Venditore entro 5 giorni lavorativi dalla
+                                    verifica.
+                                </p>
+                            </div>
+
+                            <!-- 7 -->
+                            <div class="terms-content">
+                                <h3>7. Abbonamenti Alert</h3>
+                                <p>Il servizio di alert è disponibile in modalità abbonamento. I piani disponibili sono:</p>
+                                <ul class="terms-list ms-4">
+                                    <li><strong>Base:</strong> &euro;4,99/mese</li>
+                                    <li><strong>Premium:</strong> &euro;9,99/mese</li>
+                                    <li><strong>Annuale:</strong> &euro;49,99/anno</li>
+                                </ul>
+                                <p>
+                                    Gli abbonamenti si rinnovano automaticamente salvo disdetta da parte dell’Utente almeno 24 ore prima della
+                                    scadenza. I pagamenti sono processati tramite carta di credito o PayPal. Nessun rimborso è previsto per la
+                                    disattivazione anticipata del servizio.
+                                </p>
+                            </div>
+
+                            <!-- 8 -->
+                            <div class="terms-content">
+                                <h3>8. Recesso e Rimborso</h3>
+                                <p>
+                                    L’Utente ha diritto di recedere entro 14 giorni dalla sottoscrizione iniziale dell’abbonamento ai sensi
+                                    dell’art. 52 del Codice del Consumo. In caso di evento annullato, il Venditore è tenuto a restituire il
+                                    prezzo di vendita entro 14 giorni dalla notifica ufficiale. Le commissioni e i costi di gestione non sono
+                                    rimborsabili. In caso di biglietto non conforme, Tixy SRLS provvederà, previa verifica, al rimborso
+                                    integrale all’Acquirente.
+                                </p>
+                            </div>
+
+                            <!-- 9 -->
+                            <div class="terms-content">
+                                <h3>9. Proprietà Intellettuale</h3>
+                                <p>
+                                    Tutti i contenuti, marchi, loghi, software e design presenti sulla piattaforma sono di esclusiva titolarità
+                                    di Tixy SRLS. È fatto divieto assoluto all’Utente di copiare, distribuire o modificare tali contenuti senza
+                                    preventiva autorizzazione scritta.
+                                </p>
+                            </div>
+
+                            <!-- 10 -->
+                            <div class="terms-content">
+                                <h3>10. Responsabilità e Limitazioni</h3>
+                                <p>
+                                    Tixy SRLS agisce esclusivamente quale fornitore della piattaforma tecnologica e non è parte dei contratti di
+                                    compravendita tra gli utenti. Non potrà essere ritenuta responsabile per inadempimenti contrattuali tra
+                                    Acquirente e Venditore, salvo i casi in cui la garanzia sia stata attivata direttamente da Tixy SRLS.
+                                </p>
+                            </div>
+
+                            <!-- 11 -->
+                            <div class="terms-content">
+                                <h3>11. Risoluzione del Contratto</h3>
+                                <p>
+                                    Tixy SRLS si riserva il diritto di sospendere o cessare unilateralmente l’accesso alla Piattaforma in caso
+                                    di violazione dei presenti Termini, condotte fraudolente o utilizzo illecito. L’Utente può cancellare il
+                                    proprio account in ogni momento mediante richiesta scritta.
+                                </p>
+                            </div>
+
+                            <!-- 12 -->
+                            <div class="terms-content">
+                                <h3>12. Foro Competente e Legge Applicabile</h3>
+                                <p>
+                                    Le presenti condizioni sono regolate dalla legge italiana. Per ogni controversia relativa all’interpretazione
+                                    o esecuzione del presente contratto sarà competente in via esclusiva il Foro del consumatore residente o, in
+                                    alternativa, il Foro di Roma.
+                                </p>
+                            </div>
+
+                            <!-- 13 -->
+                            <div class="terms-content">
+                                <h3>13. Disposizioni Finali</h3>
+                                <p>
+                                    Qualora una clausola dei presenti Termini sia ritenuta invalida, le restanti clausole continueranno ad avere
+                                    piena efficacia. Tixy SRLS si riserva il diritto di modificare i presenti Termini previa comunicazione
+                                    all’Utente con preavviso di almeno 15 giorni.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- terms of service end -->
+
+        </main>
+
+
+{% endblock %}

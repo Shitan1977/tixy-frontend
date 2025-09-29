@@ -1,0 +1,231 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Funziona | Tixy{% endblock %}
+
+{% block content %}
+<!-- breadcrumb -->
+<div class="site-breadcrumb"
+     style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
+  <div class="container">
+    <h2 class="breadcrumb-title">Top Venditore</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Top Venditore</li>
+    </ul>
+  </div>
+</div>
+<!-- breadcrumb end -->
+      <main class="main">
+         <!-- ========== LISTA BIGLIETTI VENDITORI (NOEMI) ========== -->
+<section class="py-80" id="sellerListNoemi">
+  <div class="container">
+
+    <!-- Intestazione -->
+    <div class="site-heading-inline mb-3">
+      <h2 class="site-title">Eventi e Biglietti in Vendita — <span>Noemi</span></h2>
+      <div class="hero-info" style="gap:10px;margin:6px 0 0;">
+        <span class="badge rounded-pill" style="background:var(--theme-color);color:#fff;">Verona</span>
+        <span class="badge rounded-pill" style="background:var(--theme-bg-light);border:1px solid var(--border-info-color);color:var(--heading-color);">ven 26 set 2025</span>
+        <span class="badge rounded-pill" style="background:var(--theme-bg-light);border:1px solid var(--border-info-color);color:var(--heading-color);">Teatro Romano • 21:00</span>
+      </div>
+    </div>
+
+    <!-- Lista venditori -->
+    <div class="row g-3">
+
+      <!-- Venditore 1 -->
+      <div class="col-12">
+        <article class="seller-card">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+              <div class="mb-1">
+                <span class="badge-top me-1">Top</span>
+                <strong class="seller-title">TicketOne Partner</strong>
+              </div>
+              <div class="small seller-sub"><i class="far fa-star"></i> 4.8 • 312 recensioni</div>
+            </div>
+
+            <div class="price-wrap text-end">
+              <small class="d-block">Totale</small>
+              <div class="price-amount">€ 76,00</div>
+              <div class="small price-break">(€ 72,50 + fee € 3,50)</div>
+            </div>
+          </div>
+
+          <ul class="seller-tags mt-2">
+            <li class="chip"><i class="far fa-layer-group"></i> Platea Gold</li>
+            <li class="chip"><i class="far fa-chair"></i> Fila 4</li>
+            <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: 2</li>
+            <li class="chip"><i class="far fa-bolt"></i> E-ticket immediato</li>
+          </ul>
+
+          <div class="text-end mt-3">
+            <a href="evento-singolo.html" class="theme-btn theme-btn-sm"><i class="far fa-cart-shopping"></i> Acquista</a>
+          </div>
+        </article>
+      </div>
+
+      <!-- Venditore 2 -->
+      <div class="col-12">
+        <article class="seller-card">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+              <strong class="seller-title d-block mb-1">BestSeats</strong>
+              <div class="small seller-sub"><i class="far fa-star"></i> 4.6 • 201 recensioni</div>
+            </div>
+            <div class="price-wrap text-end">
+              <small class="d-block">Totale</small>
+              <div class="price-amount">€ 73,90</div>
+              <div class="small price-break">(€ 69,90 + fee € 4,00)</div>
+            </div>
+          </div>
+
+          <ul class="seller-tags mt-2">
+            <li class="chip"><i class="far fa-layer-group"></i> Platea Gold</li>
+            <li class="chip"><i class="far fa-chair"></i> Fila 6</li>
+            <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: 4</li>
+            <li class="chip"><i class="far fa-mobile"></i> Mobile ticket</li>
+          </ul>
+
+          <div class="text-end mt-3">
+            <a href="evento-singolo.html" class="theme-btn theme-btn-sm"><i class="far fa-cart-shopping"></i> Acquista</a>
+          </div>
+        </article>
+      </div>
+
+      <!-- Venditore 3 -->
+      <div class="col-12">
+        <article class="seller-card">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+              <span class="badge-top me-1">Top</span>
+              <strong class="seller-title">LiveTickets</strong>
+              <div class="small seller-sub"><i class="far fa-star"></i> 4.9 • 526 recensioni</div>
+            </div>
+            <div class="price-wrap text-end">
+              <small class="d-block">Totale</small>
+              <div class="price-amount">€ 66,15</div>
+              <div class="small price-break">(€ 63,25 + fee € 2,90)</div>
+            </div>
+          </div>
+
+          <ul class="seller-tags mt-2">
+            <li class="chip"><i class="far fa-layer-group"></i> Platea</li>
+            <li class="chip"><i class="far fa-chair"></i> Fila 10</li>
+            <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: 3</li>
+            <li class="chip"><i class="far fa-file-pdf"></i> PDF via email</li>
+          </ul>
+
+          <div class="text-end mt-3">
+            <a href="evento-singolo.html" class="theme-btn theme-btn-sm"><i class="far fa-cart-shopping"></i> Acquista</a>
+          </div>
+        </article>
+      </div>
+
+      <!-- Venditore 4 -->
+      <div class="col-12">
+        <article class="seller-card">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+              <strong class="seller-title d-block mb-1">FanXchange</strong>
+              <div class="small seller-sub"><i class="far fa-star"></i> 4.4 • 128 recensioni</div>
+            </div>
+            <div class="price-wrap text-end">
+              <small class="d-block">Totale</small>
+              <div class="price-amount">€ 65,20</div>
+              <div class="small price-break">(€ 61,00 + fee € 4,20)</div>
+            </div>
+          </div>
+
+          <ul class="seller-tags mt-2">
+            <li class="chip"><i class="far fa-layer-group"></i> Platea</li>
+            <li class="chip"><i class="far fa-chair"></i> Fila 12</li>
+            <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: 2</li>
+            <li class="chip"><i class="far fa-hand-holding-box"></i> Ritiro sul posto</li>
+          </ul>
+
+          <div class="text-end mt-3">
+            <a href="evento-singolo.html" class="theme-btn theme-btn-sm"><i class="far fa-cart-shopping"></i> Acquista</a>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!-- /LISTA BIGLIETTI -->
+
+            <!-- /LISTA BIGLIETTI -->
+
+            <!-- ========== MODALE ALERT (già tua) ========== -->
+            <div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true"
+                 data-free-endpoint="/api/alerts/free"
+                 data-pro-url="/registrazione">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content" style="background:var(--theme-bg2); border:1px solid var(--border-info-color);">
+                        <div class="modal-header">
+                            <h5 class="modal-title" style="color:var(--heading-color);">Attiva alert disponibilità</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <p class="mb-2">Ti avvisiamo quando tornano disponibili biglietti per:</p>
+                            <p class="alert-event fw-bold" style="color:var(--heading-color);">—</p>
+
+                            <div class="alert-options">
+                                <div class="alert-card">
+                                    <div class="alert-card-head">
+                                        <span class="badge-free"><i class="fas fa-bell"></i> Notifiche gratuite</span>
+                                    </div>
+                                    <p class="mb-2">Ricevi una mail quando ricompaiono biglietti per questo evento.</p>
+                                    <ul class="alert-points">
+                                        <li><i class="fas fa-check"></i> Nessun costo</li>
+                                        <li><i class="fas fa-check"></i> 1 evento alla volta</li>
+                                        <li><i class="fas fa-check"></i> Alert tra i nostri venditori</li>
+                                    </ul>
+                                    <div class="row g-2 mt-2">
+                                        <div class="col-12">
+                                            <input id="alertEmail" type="email" class="form-control" placeholder="La tua email">
+                                        </div>
+                                        <div class="col-12">
+                                            <button id="btnAlertFree" class="theme-btn w-100">
+                                                <span class="fas fa-bell"></span> Attiva notifiche gratuite
+                                            </button>
+                                        </div>
+                                        <div class="col-12">
+                                            <small class="d-block alert-feedback" style="opacity:.9;"></small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert-card pro">
+                                    <div class="alert-card-head">
+                                        <span class="badge-pro"><i class="fas fa-crown"></i> Alert PRO</span>
+                                        <span class="price-tag">da €6,99/mese</span>
+                                    </div>
+                                    <p class="mb-2">Alert prioritari su altre piattaforme.</p>
+                                    <ul class="alert-points">
+                                        <li><i class="fas fa-check"></i> Monitoraggio multi-evento</li>
+                                        <li><i class="fas fa-check"></i> Frequenza elevata</li>
+                                        <li><i class="fas fa-check"></i> Filtri prezzo/settore</li>
+                                        <li><i class="fas fa-check"></i> Storico e gestione da pannello</li>
+                                    </ul>
+                                    <a id="btnAlertPro" href="registrazione.html" class="theme-btn theme-btn2 w-100">
+                                        <span class="fas fa-bolt"></span> Attiva Alert PRO
+                                    </a>
+                                </div>
+                            </div>
+
+                            <hr class="my-3" style="border-color:var(--border-info-color); opacity:.4;">
+                            <small class="d-block" style="opacity:.8;">Potrai disattivare gli alert in qualsiasi momento.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+
+
+{% endblock %}
