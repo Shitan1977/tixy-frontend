@@ -27,3 +27,12 @@ def login(request):
 
 def registrazione(request):
     return render(request, "web/registrazione.html")
+
+def conferma_otp(request):
+    return render(request, "web/conferma_otp.html")
+
+def refresh_token(request):
+    return render(request, "web/refresh_token.html")
+
+def area_riservata_profilo(request):
+    return render(request, "web/area_riservata/profilo.html")

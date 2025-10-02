@@ -71,6 +71,38 @@
                 </div>
             </div>
             <!-- login area end -->
+            <script>
+                const API_BASE = "http://127.0.0.1:8001";
 
+                document.addEventListener("DOMContentLoaded", function() {
+                    const loginForm = document.querySelector(".auth-form form");
+                    if (loginForm) {
+                        loginForm.addEventListener("submit", async function(e) {
+                            e.preventDefault();
+                            const email = loginForm.querySelector('input[type="email"]').value;
+                            const password = loginForm.querySelector('input[type="password"]').value;
+
+                            try {
+                                const res = await fetch(`${API_BASE}/api/auth/token/`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ email, password })
+                                });
+                                const data = await res.json();
+                                if (res.ok && data.access) {
+                                localStorage.setItem("access_token", data.access);
+                                localStorage.setItem("refresh_token", data.refresh);
+                                // Redirect
+                                window.location.href = "/area_riservata/profilo/";
+                                } else {
+                                alert(data.detail || "Login fallito");
+                                }
+                            } catch (err) {
+                                alert("Errore di rete");
+                            }
+                        });
+                    }
+                });
+            </script>
         </main>
 {% endblock %}

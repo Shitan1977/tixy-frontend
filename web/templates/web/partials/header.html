@@ -62,13 +62,40 @@
               <button type="button" class="nav-right-link dark-btn"><i class="icon-moon-2"></i></button>
             </div>
 
-            <div class="nav-right-btn">
-              <a href="/login.html" class="theme-btn"><i class="far fa-sign-in"></i> Accedi</a>
+            <div class="nav-right-btn" id="navProfileBtn">
+              <a href="{% url 'login' %}" class="theme-btn"><i class="far fa-sign-in"></i> Accedi</a>
             </div>
           </div>
         </div>
-
       </div>
     </nav>
   </div>
 </header>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const navProfileBtn = document.getElementById("navProfileBtn");
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    navProfileBtn.innerHTML = `
+      <div class="dropdown nav-profile-img">
+        <a href="#" class="theme-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="far fa-user"></i> Profilo
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="/area_riservata/profilo/"><i class="far fa-user"></i> Il mio profilo</a></li>
+          <li><a class="dropdown-item" href="#"><i class="far fa-ticket"></i> I miei ordini</a></li>
+          <li><a class="dropdown-item" href="#"><i class="far fa-gear"></i> Impostazioni</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="far fa-sign-out"></i> Logout</a></li>
+        </ul>
+      </div>
+    `;
+    document.getElementById("logoutBtn").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      window.location.href = "/login/";
+    });
+  }
+});
+</script>
