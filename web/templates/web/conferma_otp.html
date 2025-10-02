@@ -1,0 +1,80 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Conferma OTP | Tixy{% endblock %}
+
+{% block content %}
+<main class="main">
+  {% with bc='assets/img/breadcrumb/01.jpg' %}
+  <div class="site-breadcrumb" style="background-image:url('{% static bc %}')">
+    <div class="container">
+      <h2 class="breadcrumb-title">Conferma OTP</h2>
+      <ul class="breadcrumb-menu">
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li class="active">Conferma OTP</li>
+      </ul>
+    </div>
+  </div>
+  {% endwith %}
+
+  <div class="auth-area py-100">
+    <div class="container">
+      <div class="col-md-5 col-lg-4 mx-auto">
+        <div class="auth-wrap">
+          <div class="auth-header">
+            <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
+            <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
+            <p>Inserisci il codice OTP ricevuto via email</p>
+          </div>
+          <div class="auth-form">
+            <form id="otpForm" action="#">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-control" name="email" placeholder="La tua email" required>
+              </div>
+              <div class="form-group">
+                <label>Codice OTP</label>
+                <input type="text" class="form-control" name="otp_code" placeholder="Codice OTP" required>
+              </div>
+              <div class="auth-btn">
+                <button type="submit" class="theme-btn"><span class="far fa-check"></span>Conferma OTP</button>
+              </div>
+            </form>
+            <div class="auth-footer">
+              <p>Non hai ricevuto il codice? <a href="{% url 'refresh_token' %}">Richiedi nuovo OTP</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const otpForm = document.getElementById("otpForm");
+      if (otpForm) {
+        otpForm.addEventListener("submit", async function(e) {
+          e.preventDefault();
+          const email = otpForm.querySelector('input[name="email"]').value;
+          const otp_code = otpForm.querySelector('input[name="otp_code"]').value;
+          try {
+            const res = await fetch("http://127.0.0.1:8001/api/auth/confirm-otp/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, otp_code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              alert("OTP confermato! Ora puoi accedere.");
+              window.location.href = "/login/";
+            } else {
+              alert(data.detail || "OTP non valido");
+            }
+          } catch (err) {
+            alert("Errore di rete");
+          }
+        });
+      }
+    });
+  </script>
+</main>
+{% endblock %}

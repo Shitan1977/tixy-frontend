@@ -1,0 +1,80 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Profilo | Tixy{% endblock %}
+
+{% block content %}
+<main class="main">
+  {% with bc='assets/img/breadcrumb/01.jpg' %}
+  <div class="site-breadcrumb" style="background-image:url('{% static bc %}')">
+    <div class="container">
+      <h2 class="breadcrumb-title">Il mio profilo</h2>
+      <ul class="breadcrumb-menu">
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li class="active">Profilo</li>
+      </ul>
+    </div>
+  </div>
+  {% endwith %}
+
+  <div class="profile-area py-80">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+          <div class="auth-wrap">
+            <div class="auth-header">
+              <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
+              <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
+              <h3 id="profileName">Profilo utente</h3>
+              <p id="profileEmail"></p>
+            </div>
+            <form class="profile-form">
+              <div class="form-group mb-3">
+                <label for="first_name">Nome</label>
+                <input type="text" class="form-control" id="first_name" disabled>
+              </div>
+              <div class="form-group mb-3">
+                <label for="last_name">Cognome</label>
+                <input type="text" class="form-control" id="last_name" disabled>
+              </div>
+              <div class="form-group mb-3">
+                <label for="email">Email</label>
+                <input type="email" class="form-control" id="email" disabled>
+              </div>
+            </form>
+            <div class="auth-footer mt-4">
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", async function() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        window.location.href = "/login/";
+        return;
+      }
+      try {
+        const res = await fetch("http://127.0.0.1:8001/api/profile/", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (res.ok) {
+          const user = await res.json();
+          document.getElementById("profileName").textContent = user.first_name + " " + user.last_name;
+          document.getElementById("profileEmail").textContent = user.email;
+          document.getElementById("first_name").value = user.first_name;
+          document.getElementById("last_name").value = user.last_name;
+          document.getElementById("email").value = user.email;
+        } else {
+          window.location.href = "/login/";
+        }
+      } catch (err) {
+        window.location.href = "/login/";
+      }
+    });
+  </script>
+</main>
+{% endblock %}

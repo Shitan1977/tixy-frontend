@@ -37,24 +37,34 @@
                                 <p>Crea su Tixy un account</p>
                             </div>
                             <div class="auth-form">
-                                <form action="#">
+                                <form action="javascript:void(0)">
                                     <div class="form-group">
                                         <label>Nome</label>
-                                        <input type="text" class="form-control" placeholder="Your Name">
+                                        <input type="text" class="form-control" placeholder="Nome" name="first_name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Cognome</label>
+                                        <input type="text" class="form-control" placeholder="Cognome" name="last_name">
                                     </div>
                                     <div class="form-group">
                                         <label>Email</label>
-                                        <input type="email" class="form-control" placeholder="Your Email">
+                                        <input type="email" class="form-control" placeholder="Email" name="email">
                                     </div>
                                     <div class="form-group">
                                         <label>Password</label>
-                                        <input type="password" class="form-control" placeholder="Your Password">
+                                        <input type="password" class="form-control" placeholder="Password" name="password">
                                     </div>
                                     <div class="auth-check">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="" id="agree">
-                                            <label class="form-check-label" for="agree">
-                                                Accetta i  <a href="#">Termini e condizioni.</a>
+                                            <input class="form-check-input" type="checkbox" id="agree_terms" name="accepted_terms" required>
+                                            <label class="form-check-label" for="agree_terms">
+                                                Accetta i <a href="{% url 'termini' %}" target="_blank">Termini e condizioni</a>
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="agree_privacy" name="accepted_privacy" required>
+                                            <label class="form-check-label" for="agree_privacy">
+                                                Accetta la <a href="/privacy.html" target="_blank">Privacy Policy</a>
                                             </label>
                                         </div>
                                     </div>
@@ -79,6 +89,38 @@
                 </div>
             </div>
             <!-- register area end -->
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const regForm = document.querySelector(".auth-form form");
+                    if (regForm) {
+                        regForm.addEventListener("submit", async function(e) {
+                            e.preventDefault();
+                            const first_name = regForm.querySelector('input[name="first_name"]').value;
+                            const last_name = regForm.querySelector('input[name="last_name"]').value;
+                            const email = regForm.querySelector('input[name="email"]').value;
+                            const password = regForm.querySelector('input[name="password"]').value;
+                            const accepted_terms = regForm.querySelector('input[name="accepted_terms"]').checked;
+                            const accepted_privacy = regForm.querySelector('input[name="accepted_privacy"]').checked;
 
+                            try {
+                                const res = await fetch("http://127.0.0.1:8001/api/register/", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ first_name, last_name, email, password, accepted_terms, accepted_privacy })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert("Registrazione riuscita! Controlla la tua email per l'OTP.");
+                                    window.location.href = "/conferma_otp/";
+                                } else {
+                                    alert(data.detail || "Registrazione fallita");
+                                }
+                            } catch (err) {
+                                alert("Errore di rete");
+                            }
+                        });
+                    }
+                });
+            </script>
         </main>
 {% endblock %}
