@@ -1,0 +1,98 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}
+  Recensioni {{ venditore_name|default:"Venditore #" }}{% if not venditore_name %}{{ venditore }}{% endif %}
+{% endblock %}
+
+{% block content %}
+<main class="main pt-60 pb-80">
+  <div class="container">
+    <div class="site-heading-inline mb-3">
+      <h2 class="site-title">
+        Recensioni {{ venditore_name|default:"Venditore #" }}{% if not venditore_name %}{{ venditore }}{% endif %}
+      </h2>
+      <div class="text-muted">
+        Media: <strong>{{ stats.avg }}</strong> · {{ stats.count }} recensioni
+      </div>
+    </div>
+
+    {% if logged_in %}
+      <form method="post" action="{% url 'reviews_create' %}" class="card p-3 mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="venditore" value="{{ venditore }}">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Voto</label>
+            <select name="rating" class="form-select" required>
+              <option value="">—</option>
+              <option value="5">5 - Eccellente</option>
+              <option value="4">4 - Molto buono</option>
+              <option value="3">3 - Discreto</option>
+              <option value="2">2 - Scarso</option>
+              <option value="1">1 - Pessimo</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ID Ordine</label>
+            <input type="number" class="form-control" name="order" value="{{ order_prefill }}" placeholder="es. 1234" required>
+            <div class="form-text">Solo ordini che hai acquistato e già pagati/consegnati.</div>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Recensione</label>
+            <textarea name="testo" class="form-control" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button class="btn theme-btn">Invia recensione</button>
+        </div>
+      </form>
+    {% else %}
+      <div class="alert alert-info">Accedi per scrivere una recensione.</div>
+    {% endif %}
+
+    {% if reviews %}
+      <div class="list-group">
+        {% for r in reviews %}
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>
+                  {{ r.acquirente_info.first_name|default:"Utente" }}
+                  {{ r.acquirente_info.last_name|default:"" }}
+                </strong>
+              </div>
+              <div aria-label="Voto">⭐ {{ r.rating }}</div>
+            </div>
+            {% if r.testo %}
+              <div class="mt-2">{{ r.testo }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Paginazione compatta e centrata -->
+      <div class="mt-4 text-center">
+        {% if has_prev %}
+          <a class="btn btn-sm btn-outline-secondary me-2" href="?{{ prev_qs }}" aria-label="Pagina precedente">«</a>
+        {% else %}
+          <button class="btn btn-sm btn-outline-secondary me-2" disabled>«</button>
+        {% endif %}
+
+        <span class="badge rounded-pill bg-light text-muted"
+              style="white-space:nowrap; padding:.6rem 1rem; font-weight:600;">
+          Pagina {{ page }} / {{ pages }}
+        </span>
+
+        {% if has_next %}
+          <a class="btn btn-sm btn-outline-secondary ms-2" href="?{{ next_qs }}" aria-label="Pagina successiva">»</a>
+        {% else %}
+          <button class="btn btn-sm btn-outline-secondary ms-2" disabled>»</button>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="text-muted">Nessuna recensione presente.</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

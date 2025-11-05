@@ -1,0 +1,31 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Carrello PRO | Tixy{% endblock %}
+
+{% block content %}
+<section class="py-80">
+  <div class="container">
+    <div class="seller-card">
+      <h4 class="mb-2">Carrello Abbonamento PRO</h4>
+      <p class="text-muted">Riepilogo prima del pagamento.</p>
+
+      <ul class="list-unstyled mb-3">
+        <li><strong>Evento ID:</strong> {{ event_id }}</li>
+        <li><strong>Periodo:</strong>
+          {% if periodo == "evento" %}Fino all’evento ({{ giorni }} giorni)
+          {% else %}{{ mesi }} mese{% if mesi != 1 %}i{% endif %} ({{ giorni }} giorni)
+          {% endif %}
+        </li>
+        <li><strong>Prezzo:</strong> € {{ prezzo }}</li>
+      </ul>
+
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button type="submit" class="theme-btn">Procedi al pagamento</button>
+        <a href="{{ next|default:'/' }}" class="btn btn-outline-secondary">Annulla</a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

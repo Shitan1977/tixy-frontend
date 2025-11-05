@@ -1,0 +1,147 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Pagamento | Tixy{% endblock %}
+
+{% block content %}
+<!-- BREADCRUMB -->
+<div class="site-breadcrumb" style="background-image:url('{% static "assets/img/breadcrumb/01.jpg" %}')">
+  <div class="container">
+    <h2 class="breadcrumb-title">Pagamento</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Pagamento</li>
+    </ul>
+  </div>
+</div>
+
+<section class="py-80">
+  <div class="container">
+
+    <!-- MESSAGGI -->
+    {% if messages %}
+      <div class="mb-3">
+        {% for m in messages %}
+          <div class="alert alert-{{ m.tags|default:"info" }}">{{ m }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- STEPPER -->
+    <div class="checkout-steps mb-4">
+      <div class="step done"><span>1</span><small>Evento</small></div>
+      <div class="step done"><span>2</span><small>Riepilogo</small></div>
+      <div class="step active"><span>3</span><small>Pagamento</small></div>
+      <div class="step"><span>4</span><small>Conferma</small></div>
+    </div>
+
+    <div class="row g-4">
+      <!-- COLONNA SX: PAGAMENTO -->
+      <div class="col-lg-8">
+        <div class="checkout-card">
+          <div class="checkout-card-header">
+            <h4>Completa il pagamento</h4>
+            {% if simulated %}
+              <p class="hint">Modalità di test attiva (pagamento simulato).</p>
+            {% endif %}
+          </div>
+
+          {% if simulated %}
+            <!-- PAGAMENTO SIMULATO -->
+            <form method="post">
+              {% csrf_token %}
+              <button class="theme-btn w-100" type="submit">
+                Conferma pagamento (simulato)
+              </button>
+            </form>
+            <div class="text-center mt-3">
+              <a class="text-muted" href="javascript:history.back()">« Torna indietro</a>
+            </div>
+          {% else %}
+            <!-- PAGAMENTO REALE (placeholder Stripe/PayPal) -->
+            <div class="alert alert-info">
+              Configura il provider di pagamento per abilitare il pagamento reale.
+            </div>
+            {#
+              Esempio Stripe:
+              - Inserisci il container per Elements
+              - JS: stripe.confirmPayment({ clientSecret, ... })
+              - On success: redirect a {% url 'ordine_confermato' order.id %}
+            #}
+            <div id="payment-element" class="mb-3"></div>
+            <button class="theme-btn w-100" disabled>Procedi con il pagamento</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- COLONNA DX: RIEPILOGO ORDINE -->
+      <div class="col-lg-4">
+        <aside class="summary-box">
+          <h5 class="summary-title">Riepilogo ordine</h5>
+
+          {% with l=order.listing_info p=order.listing_info.performance_info %}
+            <div class="summary-event">
+              <h6 class="event-name">{{ p.evento_nome }}</h6>
+              <ul class="event-meta">
+                <li>
+                  <i class="fa-regular fa-calendar"></i>
+                  {% if p.starts_at_fmt %}{{ p.starts_at_fmt }}{% else %}{{ p.starts_at_utc }}{% endif %}
+                </li>
+                <li><i class="fa-solid fa-location-dot"></i> {{ p.luogo_nome }}</li>
+                {% if l.seller_info %}
+                  <li>
+                    <i class="fa-solid fa-user"></i>
+                    Venditore: {{ l.seller_info.first_name }} {{ l.seller_info.last_name }}
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          {% endwith %}
+
+          <div class="summary-items">
+            <!-- Subtotale biglietti -->
+            <div class="item">
+              <div><strong>Quantità</strong> × {{ order.qty|default:1 }}</div>
+              <div class="price">€ {{ order.subtotal|default:order.total|default:order.total_price|floatformat:2 }}</div>
+            </div>
+
+            <!-- Commissioni -->
+            {% if order.commission %}
+              <div class="item">
+                <div>Commissioni</div>
+                <div class="price">€ {{ order.commission|floatformat:2 }}</div>
+              </div>
+            {% endif %}
+
+            <!-- Cambio nominativo (se presente nel contesto o nell'ordine) -->
+            {% if change_fee or order.change_fee %}
+              <div class="item">
+                <div>Cambio nominativo</div>
+                <div class="price">
+                  € {{ change_fee|default:order.change_fee|floatformat:2 }}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- TOTALE (biglietto + commissioni + cambio nominativo) -->
+          <div class="summary-total">
+            <span>Totale</span>
+            <strong>€ {{ final_total|default:order.final_total|default:order.total|default:order.total_price|floatformat:2 }}</strong>
+          </div>
+
+          <div class="summary-safe">
+            <i class="fa-solid fa-shield-check"></i>
+            Pagamento sicuro • Protezione acquisto
+          </div>
+        </aside>
+
+        <div class="help-box mt-20">
+          <i class="fa-regular fa-circle-question"></i>
+          Hai domande? <a href="{% url 'faq' %}">Leggi le FAQ</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

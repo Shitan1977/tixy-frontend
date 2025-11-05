@@ -1,0 +1,128 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block title %}Abbonamento PRO | Tixy{% endblock %}
+
+{% block content %}
+<div class="site-breadcrumb" style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
+  <div class="container">
+    <h2 class="breadcrumb-title">Abbonamento PRO</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Attiva PRO</li>
+    </ul>
+  </div>
+</div>
+
+<section class="py-80">
+  <div class="container">
+
+    <!-- Intro/benefici -->
+    <div class="seller-card p-4 mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <h3 class="mb-2">Non perderti più i biglietti</h3>
+          <p class="text-muted mb-2">
+            Con <strong>PRO</strong> monitoriamo l’evento scelto e ti avvisiamo <strong>subito</strong> quando
+            compaiono biglietti su Tixy o su piattaforme partner, anche quando i prezzi scendono.
+          </p>
+          <ul class="m-0 ps-3 text-muted">
+            <li class="mb-1"><i class="far fa-bell me-1"></i> Alert immediati via email e notifiche</li>
+            <li class="mb-1"><i class="far fa-arrows-rotate me-1"></i> Controlli frequenti, anche fuori da Tixy</li>
+            <li class="mb-0"><i class="far fa-shield-check me-1"></i> Disdici quando vuoi</li>
+          </ul>
+          {% if event_id %}
+            <div class="mt-2"><span class="badge rounded-pill bg-info text-dark">Evento selezionato: #{{ event_id }}</span></div>
+          {% endif %}
+        </div>
+        <div class="text-end">
+          <small class="d-block text-muted">da</small>
+          <div class="display-6">€ {{ prezzo_mese|default:6.99 }}</div>
+          <small class="text-muted">al mese</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scelta piano (tuo form, compatibile con la view) -->
+    <div class="seller-card p-4">
+      <h4 class="mb-1">Attiva PRO{% if event_id %} per evento #{{ event_id }}{% endif %}</h4>
+      <p class="text-muted mb-3">Scegli la durata. Prezzo base: € {{ prezzo_mese|default:6.99 }} / mese.</p>
+
+      <form method="post" id="proForm" class="row g-3">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next|default:'' }}">
+
+        <div class="col-12">
+          <div class="seller-card p-3">
+            <div class="row g-2">
+              {% for m in months %}
+              <div class="col-6 col-md-3">
+                <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
+                  <input class="form-check-input me-1" type="radio" name="periodo" value="{{ m }}m" {% if forloop.first %}checked{% endif %}>
+                  <strong>{{ m }} {% if m == 1 %}mese{% else %}mesi{% endif %}</strong><br>
+                  <small class="text-muted js-price" data-months="{{ m }}" data-base="{{ prezzo_mese|default:6.99 }}">€ —</small>
+                </label>
+              </div>
+              {% endfor %}
+              <div class="col-12 col-md-3">
+                <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
+                  <input class="form-check-input me-1" type="radio" name="periodo" value="evento">
+                  <strong>Fino a fine evento</strong><br>
+                  <small class="text-muted">Durata standard 60 giorni • € {{ prezzo_mese|default:6.99 }}</small>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 d-flex gap-2">
+          <button type="submit" class="theme-btn" id="btnPro">
+            <i class="fa-solid fa-crown"></i> Continua
+          </button>
+          <a class="btn btn-outline-secondary" href="{{ next|default:'/' }}">Annulla</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- FAQ sintetiche -->
+    <div class="row g-4 mt-4">
+      <div class="col-lg-6">
+        <div class="seller-card p-4 h-100">
+          <h5 class="mb-2">Come funziona</h5>
+          <ol class="m-0 ps-3 text-muted">
+            <li class="mb-1">Seleziona la durata (1–12 mesi o fino a fine evento)</li>
+            <li class="mb-1">Conferma il pagamento</li>
+            <li class="mb-0">Ti avvisiamo appena troviamo biglietti o cali di prezzo</li>
+          </ol>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="seller-card p-4 h-100">
+          <h5 class="mb-2">Domande frequenti</h5>
+          <div class="mb-2"><strong>Monitorate anche altre piattaforme?</strong><br><span class="text-muted">Sì, partner selezionati.</span></div>
+          <div class="mb-2"><strong>Come ricevo gli alert?</strong><br><span class="text-muted">Email e notifiche (se abilitate).</span></div>
+          <div class="mb-0"><strong>Posso disdire?</strong><br><span class="text-muted">In qualunque momento.</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  // calcolo prezzi 1–12 mesi
+  document.querySelectorAll('.js-price').forEach(function(el){
+    var b = parseFloat(el.dataset.base || '6.99');
+    var m = parseInt(el.dataset.months || '1', 10);
+    if (!isNaN(b) && !isNaN(m)) el.textContent = '€ ' + (b * m).toFixed(2);
+  });
+  // evita doppi invii
+  var form = document.getElementById('proForm');
+  if (form) form.addEventListener('submit', function(){
+    var btn = document.getElementById('btnPro');
+    if (btn && !btn.disabled){ btn.disabled = true; btn.innerHTML = 'Attivazione...'; }
+  });
+})();
+</script>
+{% endblock %}

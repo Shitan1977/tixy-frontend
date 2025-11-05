@@ -1,0 +1,176 @@
+{% extends "web/base.html" %}
+{% block flash_messages %}{% endblock %}
+{% load static %}
+
+{% block title %}Biglietti | Tixy{% endblock %}
+
+{% block content %}
+
+<!-- BREADCRUMB -->
+<div class="site-breadcrumb" style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
+  <div class="container">
+    <h2 class="breadcrumb-title">Biglietti evento</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Biglietti</li>
+    </ul>
+  </div>
+</div>
+
+{% if messages %}
+<div class="container mt-3">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main class="main">
+
+  <!-- HEADER EVENTO -->
+  <section class="py-80">
+    <div class="container">
+      <div class="seller-card" style="padding:22px;">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <div>
+            <h3 class="seller-title mb-1">
+              {{ perf.evento_nome|default:"Evento" }}
+            </h3>
+            <div class="small text-muted">
+              {{ perf.luogo_nome|default:"Luogo" }}
+              {% if perf_when %} • {{ perf_when }}{% endif %}
+            </div>
+          </div>
+
+          <div class="text-end">
+            <small class="d-block">Prezzo</small>
+            <div class="price-amount">
+              {% if perf.prezzo_min %}
+                € {{ perf.prezzo_min|floatformat:2 }} {{ perf.valuta|default:"EUR" }}
+              {% else %}
+                <span class="text-muted">n.d.</span>
+              {% endif %}
+            </div>
+            {% if perf.prezzo_max %}
+              <div class="small price-break">fino a € {{ perf.prezzo_max|floatformat:2 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if has_tixy %}
+  <section class="py-20">
+    <div class="container">
+      <div class="site-heading-inline mb-3">
+        <h4 class="site-title">Biglietti su Tixy</h4>
+      </div>
+
+      {% with items=listings %}
+      <div class="row g-3">
+        {% for l in items %}
+        <div class="col-12">
+          <article class="seller-card">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+              <div>
+                <div class="mb-1">
+                  {% if l.seller_info %}
+                    <strong class="seller-title">
+                      {{ l.seller_info.first_name|default_if_none:"" }}
+                      {{ l.seller_info.last_name|default_if_none:"Venditore" }}
+                    </strong>
+
+                    {# === NUOVO: badge verifica accanto al nome venditore === #}
+                    {% if l.seller_info.socials_verified %}
+                      <span class="badge rounded-pill bg-success-subtle text-success ms-2">
+                        <i class="far fa-circle-check"></i> Social verificati
+                      </span>
+                    {% endif %}
+                    {% if l.seller_info.phone_verified %}
+                      <span class="badge rounded-pill bg-success-subtle text-success ms-1">
+                        <i class="far fa-phone"></i> Telefono verificato
+                      </span>
+                    {% endif %}
+                    {# === FINE NUOVO === #}
+
+                  {% else %}
+                    <strong class="seller-title">Venditore #{{ l.seller }}</strong>
+                  {% endif %}
+                </div>
+
+                <div class="small seller-sub">
+                  {% if l.seller_rating_avg %}
+                    <i class="far fa-star"></i> {{ l.seller_rating_avg|floatformat:2 }}
+                  {% else %}
+                    <i class="far fa-star-half"></i> n.d.
+                  {% endif %}
+                  {% if l.seller_reviews_count %} • {{ l.seller_reviews_count }} recensioni{% endif %}
+                </div>
+              </div>
+
+              <div class="price-wrap text-end">
+                <small class="d-block">Totale</small>
+                <div class="price-amount">
+                  {% if l.total_price %}
+                    € {{ l.total_price|floatformat:2 }} {{ l.currency|default:"EUR" }}
+                  {% else %}—{% endif %}
+                </div>
+                {% if l.price_each %}
+                  <div class="small price-break">(€ {{ l.price_each|floatformat:2 }} cad.)</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <ul class="seller-tags mt-2">
+              {% if l.seat_category %}
+                <li class="chip"><i class="far fa-layer-group"></i> {{ l.seat_category }}</li>
+              {% endif %}
+              {% if l.section %}
+                <li class="chip"><i class="far fa-grid-2"></i> Settore {{ l.section }}</li>
+              {% endif %}
+              {% if l.row %}
+                <li class="chip"><i class="far fa-chair"></i> Fila {{ l.row }}</li>
+              {% endif %}
+
+              {% if l.seat_from or l.seat_to %}
+                <li class="chip">
+                  <i class="far fa-ticket"></i>
+                  Posti {% if l.seat_from %}{{ l.seat_from }}{% endif %}{% if l.seat_to %}-{{ l.seat_to }}{% endif %}
+                </li>
+              {% endif %}
+
+              <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: {{ l.qty|default:1 }}</li>
+
+              {% if l.delivery_method %}
+                <li class="chip"><i class="far fa-truck-fast"></i> {{ l.delivery_method }}</li>
+              {% endif %}
+
+              {% if l.expires_at %}
+                <li class="chip"><i class="far fa-hourglass-half"></i> scade {{ l.expires_at_fmt }}</li>
+              {% endif %}
+            </ul>
+
+            <div class="text-end mt-3">
+              <a href="{% url 'acquista' l.id %}" class="theme-btn theme-btn-sm">
+                <i class="far fa-cart-shopping"></i> Acquista
+              </a>
+            </div>
+          </article>
+        </div>
+        {% empty %}
+        <div class="col-12">
+          <div class="alert alert-info">Nessun biglietto disponibile al momento.</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endwith %}
+    </div>
+  </section>
+
+  {% else %}
+    {% include "web/partials/event_alerts.html" with perf=perf following=following %}
+  {% endif %}
+
+</main>
+{% endblock %}

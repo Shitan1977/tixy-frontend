@@ -1,0 +1,442 @@
+/* =======================================================
+   Tixy – Area Riservata (admin.css)  — v3
+   Scope: body.account
+   Caricare DOPO assets/css/style.css
+   ======================================================= */
+
+
+/* ========== 0) Layout pagina piena + footer in basso ========== */
+
+html, body { height: 100%; }
+
+body.account{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;   /* header | main | footer */
+}
+
+body.account main,
+body.account .main,
+body.account .content,
+body.account .account-wrap{
+  flex: 1 0 auto;           /* il contenuto cresce e spinge il footer in basso */
+}
+
+body.account .account-wrap{
+  padding-bottom: 48px;     /* aria sopra il footer */
+}
+
+body.account .site-footer,
+body.account .footer-area,
+body.account footer.footer{
+  margin-top: auto;         /* footer appoggiato */
+  position: static !important;
+  z-index: 0;
+}
+
+body.account .card,
+body.account .card-ghost{
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ========== 1) Reset tipografia & link (scope account) ========== */
+
+.account h1,
+.account h2,
+.account h3,
+.account h4,
+.account h5,
+.account h6{
+  color: var(--heading-color);
+}
+
+.account a{
+  color: var(--heading-color);
+  text-decoration: none;
+  transition: var(--transition2);
+}
+.account a:hover,
+.account a:focus{
+  color: var(--theme-color);
+  text-decoration: none;
+}
+
+
+/* ========== 2) Hero / Intro ========== */
+
+.account .account-hero{
+  padding: 28px 0 18px;
+  position: relative;
+}
+.account .account-hero h1{
+  margin: 0 0 4px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: var(--heading-color);
+}
+.account .account-hero .subtitle{
+  margin: 0;
+  color: var(--body-text-color);
+  font-size: 1rem;
+}
+.account .account-hero .btn-outline-secondary{
+  border-radius: 10px;
+  padding: 8px 14px;
+}
+
+/* Overlay per testo leggibile su immagini */
+.account-hero > .container{ position: relative; z-index: 1; }
+.account-hero--overlay::before{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,.25) 100%);
+  pointer-events:none; z-index:0;
+}
+.account-hero__title{ color:#fff !important; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+.account-hero__subtitle{ color:#e5e7eb !important; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+
+.account .account-hero--sm{ padding: 14px 0 12px; }
+@media (max-width:575.98px){
+  .account-hero__title{ font-size:1.6rem; }
+  .account-hero__subtitle{ font-size:.95rem; }
+}
+
+
+/* ========== 3) Layout + Sidebar ========== */
+
+.account .account-wrap{ padding: 40px 0; }
+
+.account .account-sidebar{
+  background: var(--theme-bg-light);
+  border: 1px solid var(--border-info-color);
+  border-radius: 12px;
+  overflow: hidden;
+  position: sticky;
+  top: 90px; /* allinea alla navbar */
+}
+.account .account-sidebar .box-head{
+  padding: 16px;
+  border-bottom: 1px solid var(--border-info-color);
+}
+.account .account-sidebar .box-head h5{
+  margin: 0;
+  color: var(--heading-color);
+}
+
+.account .nav-account{
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 6px;
+}
+.account .nav-account .nav-item{
+  position: relative;
+  display:flex; align-items:center; gap:10px;
+  color: var(--heading-color);
+  padding: 10px 12px;
+  border: 1px solid var(--border-info-color);
+  border-radius: 10px;
+  background: var(--theme-bg);
+  transition: var(--transition2);
+}
+.account .nav-account .nav-item i{ color: var(--theme-color); }
+.account .nav-account .nav-item:hover{ border-color: var(--theme-color); }
+.account .nav-account .nav-item.active{
+  background: linear-gradient(90deg, var(--theme-color) 0%, var(--theme-color2) 100%);
+  color:#fff; border-color: transparent;
+}
+.account .nav-account .nav-item.active i{ color:#fff; }
+.account .nav-account .pill{
+  margin-left:auto;
+  background: var(--theme-bg-light);
+  color: var(--heading-color);
+  border: 1px solid var(--border-info-color);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .78rem; line-height:1.2;
+}
+
+@media (max-width:991.98px){
+  .account .account-sidebar{ margin-bottom:18px; }
+  .account .account-sidebar.open{ margin-bottom: 1.5rem; }
+}
+
+
+/* ========== 4) Header utente (avatar/menu) ========== */
+
+.account .header-account .dropdown-menu i{
+  width: 18px; text-align:center; margin-right:.35rem;
+}
+.account .txy-avatar{
+  width:28px; height:28px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-weight:700; background:#FFB000; color:#fff; font-size:.85rem;
+}
+.account .avatar{
+  width:34px; height:34px; border-radius:50%;
+  background: linear-gradient(135deg, var(--theme-color), var(--theme-color2));
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:600; font-size:.9rem;
+}
+
+
+/* ========== 5) Cards “ghost” ========== */
+
+.account .card-ghost{
+  border: 1px solid var(--border-info-color);
+  background: var(--theme-bg-light);
+  box-shadow: none;
+  border-radius: 14px;
+}
+.account .card-ghost .card-header{
+  background: transparent;
+  border-bottom: 1px solid var(--border-info-color);
+}
+
+.account .badge-soft{
+  background: var(--theme-bg);
+  border: 1px solid var(--border-info-color);
+  color: var(--heading-color);
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+.account .badge-soft.success{
+  border-color:#1f9d62; color:#1f9d62; background: rgba(31,157,98,.08);
+}
+.account .badge-soft.warning{
+  border-color:#b88700; color:#b88700; background: rgba(184,135,0,.08);
+}
+.account .badge-soft.muted{
+  border-color:var(--border-info-color); color:var(--body-text-color);
+}
+
+
+/* ========== 6) Tabelle area riservata ========== */
+
+.account table.table-admin{
+  width:100%; border-collapse:separate; border-spacing:0;
+}
+.account table.table-admin thead th{
+  background: var(--theme-bg);
+  color: var(--heading-color);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-info-color);
+  padding: 12px; white-space: nowrap;
+}
+.account table.table-admin tbody td{
+  border-top: 1px solid var(--border-info-color);
+  color: var(--body-text-color);
+  padding: 12px; vertical-align: middle;
+}
+.account table.table-admin tbody tr:hover{
+  background: rgba(117,127,149,.06);
+}
+
+.account .table-actions{ display:inline-flex; gap:6px; }
+.account .btn-icon-xxs{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border:1px solid var(--border-info-color);
+  background: var(--theme-bg); color: var(--heading-color);
+  border-radius:8px; font-size:12px; transition: var(--transition2);
+}
+.account .btn-icon-xxs:hover{ border-color: var(--theme-color); color: var(--theme-color); }
+
+
+/* ========== 7) Component: filtri/pillole ========== */
+
+.account .filter-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 10px; border:1px solid var(--border-info-color);
+  background: var(--theme-bg); color: var(--heading-color);
+  border-radius:999px; font-size:.85rem; line-height:1.2;
+}
+.account .filter-chip .dot{
+  width:7px; height:7px; border-radius:50%; background: var(--theme-color);
+}
+
+
+/* ========== 8) Form & input ========== */
+
+.account .form-control{
+  background: var(--theme-bg);
+  color: var(--body-text-color);
+  border: 1px solid var(--border-info-color);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.account .form-control::placeholder{ color: var(--body-text-color); }
+.account .form-control:focus{ border-color: var(--theme-color); color: var(--heading-color); }
+
+
+/* ========== 9) Helper utilities ========== */
+
+.account .muted{ color: var(--body-text-color); }
+.account .text-strong{ color: var(--heading-color); font-weight: 600; }
+
+.account .status-dot{
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:#2DBE7D; margin-right:6px;
+}
+.account .status-dot.pause{ background:#fdc005; }
+.account .status-dot.off{ background:#a3a3a3; }
+
+
+/* ========== 10) Dark mode: contrasti ========== */
+
+/* Titoli hero */
+.theme-dark .account .account-hero h1,
+.dark-theme .account .account-hero h1,
+.dark-mode  .account .account-hero h1,
+body.account.dark .account-hero h1{ color:#fff !important; }
+
+.theme-dark .account .account-hero .subtitle,
+.dark-theme .account .account-hero .subtitle,
+.dark-mode  .account .account-hero .subtitle,
+body.account.dark .account-hero .subtitle{ color:#cbd5e1 !important; }
+
+/* Bottone outline */
+.theme-dark .account .account-hero .btn-outline-secondary,
+.dark-theme .account .account-hero .btn-outline-secondary,
+.dark-mode  .account .account-hero .btn-outline-secondary,
+body.account.dark .account-hero .btn-outline-secondary{
+  color:#e5e7eb; border-color:#475569;
+}
+.theme-dark .account .account-hero .btn-outline-secondary:hover,
+.dark-theme .account .account-hero .btn-outline-secondary:hover,
+.dark-mode  .account .account-hero .btn-outline-secondary:hover,
+body.account.dark .account-hero .btn-outline-secondary:hover{
+  background:#475569; color:#0b0f14; border-color:#475569;
+}
+
+/* Link */
+.theme-dark .account a,
+.dark-theme .account a,
+.dark-mode  .account a,
+body.account.dark a{ color: var(--heading-color); }
+.theme-dark .account a:hover,
+.dark-theme .account a:hover,
+.dark-mode  .account a:hover,
+body.account.dark a:hover{ color: var(--theme-color); }
+
+/* Header tabella */
+.theme-dark .account table.table-admin thead th,
+.dark-theme .account table.table-admin thead th,
+.dark-mode  .account table.table-admin thead th,
+body.account.dark table.table-admin thead th{
+  color:#e8eaed; background: var(--theme-bg);
+}
+
+/* Badge contrastati */
+.theme-dark .account .badge-soft,
+.dark-theme .account .badge-soft,
+.dark-mode  .account .badge-soft,
+body.account.dark .badge-soft{
+  color:#e8eaed; background: rgba(148,163,184,.08);
+}
+
+
+/* ========== 11) Alert list / tabelle “belle” ========== */
+
+.account .alerts-table .event-title,
+.account .alerts-table .event-title:link,
+.account .alerts-table .event-title:visited{
+  color: var(--heading-color) !important;
+  font-weight: 700; letter-spacing: .2px;
+}
+.account .alerts-table .event-title:hover{ color: var(--theme-color); }
+.account .alerts-table .event-meta{ color:#cbd5e1; }
+.account .alerts-table .periodo{ color: var(--heading-color); }
+
+.account .alerts-table th:nth-child(2){ width:220px; }
+.account .alerts-table th:nth-child(3){ width:140px; }
+.account .alerts-table th:nth-child(4){ width:130px; }
+.account .alerts-table th:nth-child(5){ width:140px; }
+
+.account .alerts-table .table-actions{ display:flex; gap:8px; }
+.account .alerts-table .action-del.is-disabled,
+.account .alerts-table .action-del[disabled]{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+.account .alerts-table .action-play,
+.account .alerts-table .action-pause{ display:none !important; }
+
+.alerts-table td, .alerts-table th{ vertical-align: middle; }
+.alerts-table .poster{ width:72px; height:72px; border-radius:12px; object-fit:cover; }
+.alerts-table tbody tr{ border-bottom:1px solid var(--border-info-color); }
+.alerts-table .event-meta{ color:#9fb0c3; }
+
+.alerts-table td:first-child .chip-prezzo{ display:none; }
+.alerts-table td:nth-child(2) .chip-prezzo{ display:inline-flex; }
+
+.alerts-table td{ vertical-align: middle; }
+.alerts-table td:first-child{ vertical-align: top; }
+.alerts-table td:first-child .badge-soft{
+  position: static !important; display:inline-block; margin-top:.4rem; z-index:0;
+}
+.alerts-table .event-title{ display:block; margin:0 0 .25rem; line-height:1.25; }
+.alerts-table .event-meta{ margin-top:.25rem; }
+
+
+/* ========== 12) Cards riepilogo / piani / bottoni ========== */
+
+.btn-icon{ display:inline-flex; align-items:center; justify-content:center;
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--border-info-color);
+  background:var(--theme-bg-light); color:var(--color-dark); transition:var(--transition2);
+}
+.btn-icon:hover{ border-color:var(--theme-color); color:var(--theme-color); }
+.btn-icon[disabled]{ opacity:.45; pointer-events:none; }
+
+.plan-summary .list-unstyled li{
+  display:flex; justify-content:space-between; gap:16px;
+  padding:10px 0; border-top:1px dashed var(--border-info-color);
+}
+.plan-summary .list-unstyled li:first-child{ border-top:none; padding-top:0; }
+
+.badge-plan{
+  display:inline-flex; align-items:center; gap:.4rem;
+  border-radius:999px; padding:.35rem .65rem; font-weight:600;
+  background:var(--theme-bg); border:1px solid var(--border-info-color); color:var(--heading-color);
+}
+.badge-plan i{ color:var(--theme-color); }
+
+.status-pill{
+  display:inline-flex; align-items:center; gap:.4rem;
+  border-radius:999px; padding:.40rem .70rem; font-weight:700;
+  background:#d9f0e5; color:#145f3b;
+}
+
+
+/* ========== 13) “Acquisti” – tabella compatta ========== */
+
+.orders-card .card-header h4{ font-size:1.25rem; }
+.orders-card .card-header small{ font-size:.9rem; }
+
+.table.orders-table{ --cell-py:.55rem; --cell-px:.75rem; }
+.table.orders-table > :not(caption) > * > *{ padding: var(--cell-py) var(--cell-px); }
+.table.orders-table thead th{
+  font-size:.9rem; letter-spacing:.2px; color:var(--heading-color);
+  border-bottom:1px solid var(--border-info-color);
+}
+.orders-table .order-title{ font-size:1rem; font-weight:600; color:var(--heading-color); margin:0; }
+.orders-table .order-sub{ font-size:.85rem; color:var(--body-text-color); margin:0; }
+.orders-table .order-meta{ font-size:.9rem; color:var(--body-text-color); }
+.orders-table .currency{ color:var(--heading-color); }
+.badge.badge-compact{ font-size:.8rem; padding:.35rem .55rem; border-radius:.6rem; }
+.btn.btn-xs{ padding:.3rem .6rem; font-size:.85rem; border-radius:.5rem; }
+.orders-table .btn-group .btn{ white-space:nowrap; }
+.orders--no-image .order-cover{ display:none !important; }
+.orders--no-image .order-text{ margin-left:0 !important; }
+.theme-dark .orders-table thead th,
+.dark-mode  .orders-table thead th,
+body.dark   .orders-table thead th{ color:#e5e7eb; }
+
+
+/* ========== 14) Responsive micro-ritocchi ========== */
+
+@media (max-width:1199.98px){
+  .account .account-hero{ padding:22px 0 12px; }
+}
+@media (max-width:575.98px){
+  .account .account-hero h1{ font-size:1.6rem; }
+}

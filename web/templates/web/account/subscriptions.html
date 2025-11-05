@@ -1,0 +1,187 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Tixy — Abbonamenti PRO{% endblock %}
+{% block body_class %}account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="m-0 account-hero__title">Abbonamenti PRO</h1>
+            <p class="subtitle m-0 account-hero__subtitle">Storico e stato dei monitoraggi a pagamento</p>
+        </div>
+    </div>
+</section>
+
+<section class="account-wrap">
+    <div class="container">
+        <div class="row g-3">
+            <!-- SIDEBAR -->
+            <aside class="col-lg-3">
+                <div class="account-sidebar">
+                    <div class="box-head">
+                        <h5 class="m-0">Menu Account</h5>
+                        <small class="text-muted">Mister Alert</small>
+                    </div>
+                    <nav class="nav-account" aria-label="Menu account">
+                        <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+                            <i class="far fa-gauge-high"></i> Dashboard
+                        </a>
+                        <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+                            <i class="far fa-bell"></i> I miei Alert
+                        </a>
+                        <a class="nav-item active" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+                            <i class="far fa-crown"></i> Abbonamenti
+                        </a>
+                        <a class="nav-item active" href="{% url 'account_tickets' %}" data-route="acquisti">
+                            <i class="far fa-bag-shopping"></i> Acquisti
+                        </a> <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita"><i
+                            class="far fa-tags"></i> Rivendita</a>
+                        <a class="nav-item" href="{% url 'account_support_list' %}" data-route="assistenza"><i class="far fa-life-ring"></i> Assistenza</a>
+                        <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo"><i class="far fa-user-shield"></i> Profilo
+                            &amp; Sicurezza</a>
+                        {% if profilo.is_staff %}
+                        <a class="nav-item" href="{{ API_BASE_URL|default:'#' }}/admin/" target="_blank" rel="noopener">
+                            <i class="far fa-screwdriver-wrench"></i> Backoffice
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </aside>
+            <!-- /SIDEBAR -->
+
+            <!-- MAIN -->
+            <div class="col-lg-9">
+                <div class="card card-ghost mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="m-0">I tuoi abbonamenti PRO</h4>
+                            <small class="text-muted">Elenco degli abbonamenti sottoscritti con stato e scadenze</small>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        {% if page_obj and page_obj.object_list %}
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0 table-admin">
+                                <thead>
+                                <tr>
+                                    <th>Evento</th>
+                                    <th class="text-nowrap">Attivazione</th>
+                                    <th class="text-nowrap">Scadenza PRO</th>
+                                    <th class="text-nowrap">Data evento</th>
+                                    <th class="text-end text-nowrap">Stato</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for it in page_obj.object_list %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if it.cover %}
+                                            <img src="{{ it.cover }}" alt="" class="rounded me-2"
+                                                 style="width:48px;height:48px;object-fit:cover;">
+                                            {% else %}
+                                            <div class="rounded bg-light me-2 d-flex align-items-center justify-content-center"
+                                                 style="width:48px;height:48px;">
+                                                <i class="far fa-ticket-simple text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-semibold">{{ it.title|default:"Evento" }}</div>
+                                                {% if it.period %}
+                                                <div class="small text-muted">Piano: {{ it.period }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        {% if it.created_at %}{{ it.created_at }}{% else %}<span
+                                            class="text-muted">—</span>{% endif %}
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        {% if it.expires_at %}{{ it.expires_at }}{% else %}<span
+                                            class="text-muted">—</span>{% endif %}
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        {% if it.event_date %}{{ it.event_date }}{% else %}<span
+                                            class="text-muted">—</span>{% endif %}
+                                    </td>
+
+                                    <td class="text-end text-nowrap">
+                                        {# mapping: pending->Pending, success->Attivo, expired->Scaduto, off->Chiuso #}
+                                        {% with st=it.status|default:"pending"|lower %}
+                                        {% if st == "success" %}
+                                        <span class="badge badge-soft success">Attivo</span>
+                                        {% elif st == "expired" %}
+                                        <span class="badge badge-soft danger">Scaduto</span>
+                                        {% elif st == "off" %}
+                                        <span class="badge badge-soft secondary">Chiuso</span>
+                                        {% else %}
+                                        <span class="badge badge-soft warning">Pending</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-muted">Non ci sono abbonamenti PRO da mostrare.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="small text-muted d-flex align-items-center gap-3">
+                    <span><span class="badge badge-soft success me-1">Attivo</span> monitoraggio in corso</span>
+                    <span><span
+                            class="badge badge-soft warning me-1">Pending</span> attivo ma non ha ancora trovato</span>
+                    <span><span class="badge badge-soft danger me-1">Scaduto</span> abbonamento scaduto</span>
+                    <span><span class="badge badge-soft secondary me-1">Chiuso</span> evento trascorso</span>
+                </div>
+            </div>
+            <!-- /MAIN -->
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function(){
+      // evidenzia la voce corretta nel menu
+      const path = (location.pathname || '/').replace(/\/+$/,'').toLowerCase();
+      const rules = [
+        ['abbonamenti', ['/account/abbonamenti', 'abbonamenti', 'subscription', 'subscriptions']],
+        ['alert',       ['/account/alerts', 'alert', 'alerts']],
+        ['rivendita',   ['rivendita']],
+        ['assistenza',  ['assistenza','supporto','help']],
+        ['profilo',     ['profilo','profile','sicurezza']],
+        ['dashboard',   ['/account','dashboard']],
+      ];
+      function matches(tokens){
+        return tokens.some(t=>{
+          t=t.toLowerCase();
+          if(t.startsWith('/')) return path.startsWith(t);
+          return path.includes(t);
+        });
+      }
+      let key='abbonamenti';
+      for(const [k,tokens] of rules){ if(matches(tokens)){ key=k; break; } }
+      document.querySelectorAll('.nav-account a')
+        .forEach(a => a.classList.toggle('active', a.dataset.route === key));
+    })();
+</script>
+{% endblock %}

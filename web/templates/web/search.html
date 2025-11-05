@@ -1,0 +1,147 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Risultati ricerca | Tixy{% endblock %}
+
+{% block content %}
+<!-- BREADCRUMB -->
+<div class="site-breadcrumb"
+     style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
+    <div class="container">
+        <h2 class="breadcrumb-title">Risultati ricerca</h2>
+        <ul class="breadcrumb-menu">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li class="active">Ricerca</li>
+        </ul>
+    </div>
+</div>
+<!-- /breadcrumb -->
+
+<main class="main">
+    <!-- BARRA RIASSUNTO -->
+    <section class="pt-60 pb-20">
+        <div class="container">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                    {% if q %}
+                    <span class="badge rounded-pill" style="background:var(--theme-color);color:#fff;">
+                        <i class="far fa-search me-1"></i>{{ q }}
+                    </span>
+                    {% endif %}
+                    {% if city %}
+                    <span class="badge rounded-pill"
+                          style="background:var(--theme-bg-light);border:1px solid var(--border-info-color);color:var(--heading-color);">
+                        <i class="far fa-location-dot me-1"></i>{{ city }}
+                    </span>
+                    {% endif %}
+                    {% if date %}
+                    <span class="badge rounded-pill"
+                          style="background:var(--theme-bg-light);border:1px solid var(--border-info-color);color:var(--heading-color);">
+                        <i class="far fa-calendar me-1"></i>{{ date }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="small text-muted">
+                    Trovate <strong>{{ count|default:0 }}</strong> performance
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- LISTA PERFORMANCE -->
+    <section class="py-20">
+        <div class="container">
+            {% if results %}
+            <div class="row g-3">
+                {% for p in results %}
+                <div class="col-12">
+                    <article class="seller-card hover-shadow">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <!-- Info evento -->
+                            <div>
+                                <div class="mb-1">
+                                    <strong class="seller-title">{{ p.evento_nome|default:"Evento" }}</strong>
+                                </div>
+                                <div class="small seller-sub">
+                                    <i class="far fa-location-dot me-1"></i>{{ p.luogo_nome|default:"" }}
+                                    {% if p.starts_at_utc %}
+                                    {% with iso=p.starts_at_utc %}
+                                    • <i class="far fa-clock ms-1 me-1"></i>
+                                    {{ iso|slice:"8:10" }}/{{ iso|slice:"5:7" }}/{{ iso|slice:"0:4" }}
+                                    {{ iso|slice:"11:16" }}
+                                    {% endwith %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Prezzo -->
+                            <div class="text-end">
+                                <small class="d-block text-muted">Prezzo</small>
+                                <div class="price-amount">
+                                    {% if p.prezzo_min %}
+                                    € {{ p.prezzo_min|floatformat:2 }} {{ p.valuta|default:"EUR" }}
+                                    {% else %}
+                                    <span class="text-muted">n.d.</span>
+                                    {% endif %}
+                                </div>
+                                {% if p.prezzo_max %}
+                                <div class="small price-break">fino a € {{ p.prezzo_max|floatformat:2 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        <ul class="seller-tags mt-2">
+                            <li class="chip"><i class="far fa-ticket"></i> ID: {{ p.id }}</li>
+                            {% if p.status %}
+                            <li class="chip {% if p.status == 'ONSALE' %}bg-success text-white{% endif %}">
+                                <i class="far fa-signal"></i> {{ p.status }}
+                            </li>
+                            {% endif %}
+                            {% if p.disponibilita_agg %}
+                            <li class="chip"><i class="far fa-rotate"></i> agg. {{ p.disponibilita_agg }}</li>
+                            {% endif %}
+                        </ul>
+
+                        <!-- Azioni -->
+                        <div class="text-end mt-3 d-flex gap-2 justify-content-end">
+                            <a href="{% url 'event-listings' p.id %}" class="theme-btn theme-btn-sm">
+                                <i class="far fa-cart-shopping"></i> Vedi biglietti
+                            </a>
+                            {% if p.evento and count == 1 %}
+                            <a href="{% url 'event_dates' p.evento %}" class="theme-btn theme-btn-sm theme-btn2">
+                                <i class="far fa-calendar-days"></i> Altre date
+                            </a>
+                            {% endif %}
+                        </div>
+                    </article>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Paginazione -->
+            {% if next or previous %}
+            <nav class="mt-4 d-flex justify-content-between align-items-center">
+                <a class="btn btn-outline-secondary {% if not previous %}disabled{% endif %}"
+                   href="{{ previous|default:'#'|safe }}">
+                    « Precedente
+                </a>
+                <span class="text-muted">Pagina</span>
+                <a class="btn btn-outline-secondary {% if not next %}disabled{% endif %}"
+                   href="{{ next|default:'#'|safe }}">
+                    Successiva »
+                </a>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info mt-4">
+                Nessuna performance trovata. Prova a cambiare i filtri.
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {{ block.super }}
+</main>
+{% endblock %}

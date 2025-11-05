@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block title %}Eventi | Tixy{% endblock %}
+
+{% block content %}
+<main class="main pt-60 pb-80">
+  <div class="container">
+    <div class="site-heading-inline mb-3">
+      <h2 class="site-title">Eventi</h2>
+      <div class="text-muted">{{ count }} risultati</div>
+    </div>
+
+    {% if items %}
+      <div class="row g-4">
+        {% for it in items %}
+          <div class="col-12 col-md-6 col-lg-4">
+            <article class="seller-card h-100">
+              <h6 class="mb-1 text-truncate" title="{{ it.evento_nome }}">{{ it.evento_nome }}</h6>
+              <div class="small text-muted mb-2">
+                <i class="far fa-location-dot me-1"></i>{{ it.luogo_nome }}
+                {% if it.starts_fmt %} • <i class="far fa-calendar ms-1 me-1"></i>{{ it.starts_fmt }}{% endif %}
+              </div>
+
+              <div class="d-flex flex-wrap gap-2">
+                <a class="theme-btn theme-btn-sm" href="{% url 'event-listings' it.perf_id %}">
+                  <i class="far fa-ticket me-1"></i> Vedi biglietti
+                </a>
+              </div>
+            </article>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if pages > 1 %}
+      <nav class="mt-4 d-flex justify-content-between align-items-center">
+        <a class="btn btn-outline-secondary {% if not has_prev %}disabled{% endif %}" href="?page={{ prev_page }}">« Precedente</a>
+        <span class="text-muted">Pagina {{ page }} / {{ pages }}</span>
+        <a class="btn btn-outline-secondary {% if not has_next %}disabled{% endif %}" href="?page={{ next_page }}">Successiva »</a>
+      </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-muted">Nessun evento attivo trovato.</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

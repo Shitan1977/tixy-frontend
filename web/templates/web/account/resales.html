@@ -1,0 +1,147 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Tixy — Carica biglietto{% endblock %}
+{% block body_class %}account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Carica nuovo biglietto</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Seleziona l’evento dal portale e carica PDF o URL.</p>
+    </div>
+    <div>
+      <a href="{% url 'account_resales' %}" class="theme-btn theme-btn--outline">
+        <i class="far fa-arrow-left me-1"></i> Torna alla Rivendita
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+      <!-- Sidebar -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard"><i class="far fa-gauge-high"></i> Dashboard</a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert"><i class="far fa-bell"></i> I miei Alert</a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti"><i class="far fa-crown"></i> Abbonamenti</a>
+            <a class="nav-item" href="{% url 'account_tickets' %}" data-route="acquisti"><i class="far fa-bag-shopping"></i> Acquisti</a>
+            <a class="nav-item active" href="{% url 'account_resales' %}" data-route="rivendita"><i class="far fa-tags"></i> Rivendita</a>
+            <a class="nav-item" href="{% url 'account_support_list' %}" data-route="assistenza"><i class="far fa-life-ring"></i> Assistenza</a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo"><i class="far fa-user-shield"></i> Profilo &amp; Sicurezza</a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <div class="col-lg-9">
+        <div class="card card-ghost">
+          <div class="card-header"><h4 class="m-0">Dati biglietto</h4></div>
+
+          <form class="card-body" method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            <div class="row g-3">
+              <!-- 1) Evento/performance -->
+              <div class="col-12">
+                <label class="form-label">Evento (seleziona una data)</label>
+                <select name="performance" class="form-select" required>
+                  <option value="">— Seleziona —</option>
+                  {% for p in perfs %}
+                    <option value="{{ p.id }}">{{ p.evento }} — {{ p.venue }} — {{ p.when_fmt }}</option>
+                  {% endfor %}
+                </select>
+                {% if not perfs %}
+                  <div class="form-text text-danger">Nessun evento futuro trovato: crea performance nel backend.</div>
+                {% endif %}
+              </div>
+
+              <!-- 2) Quantità -->
+              <div class="col-md-3">
+                <label class="form-label">Quantità</label>
+                <input type="number" class="form-control" name="qty" min="1" step="1" value="1" required>
+                <div class="form-text">Potrai selezionare i singoli nominativi dopo l’analisi PDF.</div>
+              </div>
+
+              <!-- 3) Prezzo richiesto (iniziale) -->
+              <div class="col-md-3">
+                <label class="form-label">Prezzo richiesto (EUR)</label>
+                <input type="number" class="form-control" name="price_each" min="0" step="0.01" placeholder="es. 59.00" required>
+              </div>
+
+              <!-- 4) Prezzo del biglietto (faciale / max) -->
+              <div class="col-md-3">
+                <label class="form-label">Prezzo del biglietto (MAX)</label>
+                <input type="number" class="form-control" name="face_value_price" min="0" step="0.01" placeholder="valore sul biglietto" required>
+                <div class="form-text">Valore facciale: limite massimo consentito.</div>
+              </div>
+
+              <!-- 5) Prezzo minimo di vendita -->
+              <div class="col-md-3">
+                <label class="form-label">Prezzo minimo (EUR)</label>
+                <input type="number" class="form-control" name="min_price" min="0" step="0.01" placeholder="es. 30.00" required>
+              </div>
+
+              <!-- TOP -->
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="is_top" name="is_top">
+                  <label class="form-check-label" for="is_top">
+                    Rendi l’annuncio <strong>TOP</strong>
+                  </label>
+                </div>
+                <div class="form-text">
+                  TOP: commissioni <strong>10%</strong> sul venduto. Senza TOP: commissioni <strong>2%</strong>.
+                </div>
+              </div>
+
+              <!-- 6) PDF o URL -->
+              <div class="col-md-6">
+                <label class="form-label">Carica PDF (alternativo a URL)</label>
+                <input type="file" class="form-control" name="ticket_file" accept="application/pdf">
+                <div class="form-text">Se carichi il PDF, dedurremo “PDF” come modalità di consegna.</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">URL biglietto digitale (alternativo al PDF)</label>
+                <input type="url" class="form-control" name="ticket_url" placeholder="https://…">
+                <div class="form-text">Se compili l’URL (senza PDF), dedurremo “E-TICKET”.</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="theme-btn">
+                <i class="far fa-cloud-upload-alt me-1"></i> Avvia caricamento
+              </button>
+            </div>
+          </form>
+        </div>
+      </div><!-- /col-lg-9 -->
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    document.querySelectorAll('.nav-account a')
+      .forEach(a => a.classList.toggle('active', a.dataset.route === 'rivendita'));
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Tixy — Carica biglietto{% endblock %}
+{% block body_class %}account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+<style>
+  .form-text { font-size:.875rem; color:#6c757d; }
+  .account-hero .theme-btn { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Rivendita</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Carica un nuovo biglietto</p>
+    </div>
+    <div>
+      <a href="{% url 'account_resales' %}" class="theme-btn theme-btn-outline">
+        <i class="far fa-arrow-left me-1"></i> Torna ai miei annunci
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+      <!-- Sidebar -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+              <i class="far fa-gauge-high"></i> Dashboard
+            </a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+              <i class="far fa-bell"></i> I miei Alert
+            </a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+              <i class="far fa-crown"></i> Abbonamenti
+            </a>
+            <a class="nav-item" href="{% url 'account_tickets' %}" data-route="acquisti">
+              <i class="far fa-bag-shopping"></i> Acquisti
+            </a>
+            <a class="nav-item active" href="{% url 'account_resales' %}" data-route="rivendita">
+              <i class="far fa-tags"></i> Rivendita
+            </a>
+            <a class="nav-item" href="{% url 'account_support_list' %}" data-route="assistenza">
+              <i class="far fa-life-ring"></i> Assistenza
+            </a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo">
+              <i class="far fa-user-shield"></i> Profilo &amp; Sicurezza
+            </a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <div class="col-lg-9">
+        <div class="card card-ghost">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+              <h4 class="m-0">Carica biglietto</h4>
+              <small class="text-muted">Seleziona l’evento dal nostro catalogo e allega PDF o URL.</small>
+            </div>
+          </div>
+
+          <div class="card-body">
+            {% if messages %}
+              <div class="mb-3">
+                {% for m in messages %}
+                  <div class="alert alert-{{ m.tags|default:"info" }} mb-2">{{ m }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <form action="" method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+
+              <!-- Evento / performance -->
+              <div class="mb-3">
+                <label for="performance" class="form-label fw-semibold">Evento &amp; data *</label>
+                <select id="performance" name="performance" class="form-select" required>
+                  <option value="">Seleziona evento/data…</option>
+                  {% for p in perfs %}
+                    <option value="{{ p.id }}">
+                      {{ p.evento }} — {{ p.venue }} — {{ p.when_fmt }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Vedi solo le date future presenti su Tixy.</div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label for="qty" class="form-label fw-semibold">Quantità *</label>
+                  <input type="number" min="1" step="1" id="qty" name="qty" class="form-control" value="1" required>
+                  <div class="form-text">Potrai selezionare i singoli posti nella fase di revisione.</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label for="price_each" class="form-label fw-semibold">Prezzo che vuoi chiedere (cad.) *</label>
+                  <input type="number" inputmode="decimal" step="0.01" min="0" id="price_each" name="price_each"
+                         class="form-control" placeholder="es. 50.00" required>
+                  <div class="form-text">Prezzo richiesto per ciascun biglietto.</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label for="min_price" class="form-label fw-semibold">Prezzo minimo di vendita</label>
+                  <input type="number" inputmode="decimal" step="0.01" min="0" id="min_price" name="min_price"
+                         class="form-control" placeholder="opzionale">
+                  <div class="form-text">Soglia sotto la quale non vuoi vendere.</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label for="face_value_price" class="form-label fw-semibold">Prezzo massimo (valore facciale)</label>
+                  <input type="number" inputmode="decimal" step="0.01" min="0" id="face_value_price" name="face_value_price"
+                         class="form-control" placeholder="opzionale">
+                  <div class="form-text">Prezzo stampato sul biglietto (se presente).</div>
+                </div>
+
+                <div class="col-md-8 d-flex align-items-center">
+                  <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" id="is_top" name="is_top">
+                    <label class="form-check-label fw-semibold" for="is_top">Top biglietto</label>
+                    <div class="form-text">
+                      Se attivo: commissione <strong>10%</strong> e comparsa nei <strong>Top</strong>.
+                      Altrimenti commissione <strong>2%</strong>.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="my-4">
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="ticket_file" class="form-label fw-semibold">Carica PDF biglietto</label>
+                  <input type="file" id="ticket_file" name="ticket_file" accept="application/pdf" class="form-control">
+                  <div class="form-text">Carica il PDF del biglietto (se disponibile).</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="ticket_url" class="form-label fw-semibold">Oppure URL biglietto digitale</label>
+                  <input type="url" id="ticket_url" name="ticket_url" class="form-control" placeholder="https://…">
+                  <div class="form-text">Inserisci l’URL del biglietto se non carichi il PDF.</div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end mt-4">
+                <a href="{% url 'account_resales' %}" class="btn btn-light me-2">Annulla</a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="far fa-cloud-upload-alt me-1"></i> Avvia caricamento
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div><!-- /col-lg-9 -->
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    // evidenzia voce menu
+    document.querySelectorAll('.nav-account a')
+      .forEach(a => a.classList.toggle('active', a.dataset.route === 'rivendita'));
+
+    // escludi file/URL a vicenda
+    const file = document.getElementById('ticket_file');
+    const url  = document.getElementById('ticket_url');
+
+    const sync = () => {
+      if (file && file.files && file.files.length) {
+        url.value = '';
+        url.setAttribute('disabled', 'disabled');
+      } else {
+        url.removeAttribute('disabled');
+      }
+      if (url && url.value.trim().length > 0) {
+        file.value = '';
+        file.setAttribute('disabled', 'disabled');
+      } else {
+        file.removeAttribute('disabled');
+      }
+    };
+    if (file) file.addEventListener('change', sync);
+    if (url)  url.addEventListener('input',  sync);
+  })();
+</script>
+{% endblock %}

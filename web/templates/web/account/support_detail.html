@@ -1,0 +1,297 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Supporto — Dettaglio ticket{% endblock %}
+{% block body_class %}account account-support{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Area Riservata</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Assistenza &amp; ticket</p>
+    </div>
+    <div>
+      <a class="btn btn-light" href="{% url 'account_support_list' %}">
+        <i class="far fa-arrow-left me-2"></i> Torna ai ticket
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+
+      <!-- SIDEBAR (menu) -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+              <i class="far fa-gauge-high"></i> Dashboard
+            </a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+              <i class="far fa-bell"></i> I miei Alert
+            </a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+              <i class="far fa-crown"></i> Abbonamenti
+            </a>
+            <a class="nav-item" href="{% url 'account_tickets' %}" data-route="acquisti">
+              <i class="far fa-bag-shopping"></i> Acquisti
+            </a>
+            <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita">
+              <i class="far fa-tags"></i> Rivendita
+            </a>
+            <a class="nav-item active" href="{% url 'account_support_list' %}" data-route="assistenza">
+              <i class="far fa-life-ring"></i> Assistenza
+            </a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo">
+              <i class="far fa-user-shield"></i> Profilo &amp; Sicurezza
+            </a>
+            {% if profilo.is_staff %}
+            <a class="nav-item" href="{{ API_BASE_URL|default:'#' }}/admin/" target="_blank" rel="noopener">
+              <i class="far fa-screwdriver-wrench"></i> Backoffice
+            </a>
+            {% endif %}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="col-lg-9">
+
+        {% comment %}
+          Se nella view non hai rinominato t->ticket / msgs->posts, attiva il WITH qui sotto:
+        {% endcomment %}
+        {# {% with ticket=t posts=msgs %} #}
+
+        <!-- HEADER + META -->
+        <div class="card card-ghost mb-3">
+          <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-column">
+              <h4 class="m-0">Ticket #{{ ticket.id }} — {{ ticket.title }}</h4>
+              <small class="text-muted">
+                Creato il {{ created_fmt }} · Ultimo aggiornamento {{ updated_fmt }}
+              </small>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              {% if ticket.status == "OPEN" %}
+                <span class="badge badge-soft success">Aperto</span>
+              {% elif ticket.status == "PENDING" %}
+                <span class="badge badge-soft warning">In attesa</span>
+              {% else %}
+                <span class="badge badge-soft secondary">Chiuso</span>
+              {% endif %}
+
+              <span class="kbd" title="Categoria">{{ category_label|default:ticket.category|capfirst }}</span>
+              <span class="kbd" title="Priorità">{{ priority_label|default:ticket.priority|capfirst }}</span>
+
+              {% if ticket.order %}
+                <a class="kbd text-decoration-none" title="Ordine collegato"
+                   href="{% url 'ordine' ticket.order %}">Ordine #{{ ticket.order }}</a>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if ticket.description %}
+          <div class="card-body">
+            {{ ticket.description|linebreaksbr }}
+            {% if ticket.attachments %}
+              <ul class="attachment-list mt-3">
+                {% for a in ticket.attachments %}
+                  <li>
+                    <i class="far fa-paperclip"></i>
+                    <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name|default:"Allegato" }}</a>
+                    {% if a.size_human %}<small class="text-muted">— {{ a.size_human }}</small>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
+            <form method="post" action="." class="m-0">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="refresh">
+              <button class="btn btn-light" type="submit">
+                <i class="far fa-rotate"></i> Aggiorna
+              </button>
+            </form>
+
+            {% if ticket.status == "CLOSED" %}
+              <form method="post" action="." class="m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reopen">
+                <button class="btn btn-outline-primary" type="submit">
+                  <i class="far fa-lock-open"></i> Riapri
+                </button>
+              </form>
+            {% else %}
+              <form method="post" action="." class="m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="close">
+                <button class="btn btn-outline-danger" type="submit">
+                  <i class="far fa-lock"></i> Chiudi
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="card card-ghost mb-3">
+          <div class="card-header">
+            <h5 class="m-0"><i class="far fa-messages me-2"></i>Conversazione</h5>
+          </div>
+          <div class="card-body">
+            {% if posts %}
+              <ul class="timeline">
+                {% for p in posts %}
+                  <li class="timeline-item">
+                    <span class="dot"></span>
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                      <div class="fw-semibold">
+                        {% if p.is_staff %}
+                          <i class="far fa-headset me-1"></i> Supporto
+                        {% else %}
+                          <i class="far fa-user me-1"></i> {{ p.author_name|default:"Tu" }}
+                        {% endif %}
+                      </div>
+                      <div class="meta">{{ p.created_fmt }}</div>
+                    </div>
+                    <div class="mt-2">
+                      {% if p.body_html %}{{ p.body_html|safe }}{% else %}{{ p.body|linebreaksbr }}{% endif %}
+                    </div>
+                    {% if p.attachments %}
+                      <ul class="attachment-list mt-2">
+                        {% for a in p.attachments %}
+                          <li>
+                            <i class="far fa-paperclip"></i>
+                            <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name|default:"Allegato" }}</a>
+                            {% if a.size_human %}<small class="text-muted">— {{ a.size_human }}</small>{% endif %}
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="text-muted">Nessun messaggio ancora. Scrivi il primo aggiornamento qui sotto.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- REPLY -->
+        <div class="card card-ghost" id="reply">
+          <form method="post" action="." enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reply">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <h5 class="m-0"><i class="far fa-reply me-2"></i>Rispondi al ticket</h5>
+              <button class="btn btn-primary" type="submit">
+                <i class="far fa-paper-plane me-2"></i> Invia risposta
+              </button>
+            </div>
+            <div class="card-body">
+              {% if messages %}
+                {% for m in messages %}
+                  <div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>
+                {% endfor %}
+              {% endif %}
+
+              <div class="mb-3">
+                <label class="form-label">Messaggio <span class="text-danger">*</span></label>
+                <textarea name="message" rows="6" class="form-control" minlength="3" maxlength="4000"
+                          placeholder="Scrivi la tua risposta...">{{ form.message|default:'' }}</textarea>
+                <div class="form-text">Puoi incollare log o testo formattato. Max 4000 caratteri.</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Allegati (PDF, PNG, JPG) — max 5</label>
+                <input type="file" name="attachments" class="form-control" accept=".pdf,.png,.jpg,.jpeg" multiple>
+                <ul class="small text-muted mt-2 mb-0" id="fileList" style="list-style: disc; padding-left: 18px;"></ul>
+              </div>
+
+              {% if ticket.status == "CLOSED" %}
+                <div class="alert alert-warning mb-0">
+                  Il ticket è chiuso: rispondendo verrà riaperto automaticamente.
+                </div>
+              {% endif %}
+            </div>
+            <div class="card-footer d-flex justify-content-end gap-2">
+              <a href="{% url 'account_support_list' %}" class="btn btn-light">Indietro</a>
+              <button class="btn btn-primary" type="submit">
+                <i class="far fa-paper-plane me-2"></i> Invia risposta
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {# {% endwith %} #}
+      </div><!-- /col-lg-9 -->
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // attiva 'Assistenza' nel menu
+    const path = (location.pathname || '/').replace(/\/+$/,'').toLowerCase();
+    const rules = [
+      ['abbonamenti', ['/account/abbonamenti','abbonamenti','subscription','subscriptions']],
+      ['alert',       ['/account/alerts','alert','alerts']],
+      ['rivendita',   ['rivendita']],
+      ['assistenza',  ['assistenza','supporto','help','/account/support']],
+      ['profilo',     ['profilo','profile','sicurezza']],
+      ['acquisti',    ['/account/tickets','acquisti']],
+      ['dashboard',   ['/account','dashboard']],
+    ];
+    function matches(tokens){
+      return tokens.some(t => t.startsWith('/') ? path.startsWith(t.toLowerCase())
+                                               : path.includes(t.toLowerCase()));
+    }
+    let key = 'assistenza';
+    for (const [k, toks] of rules){ if (matches(toks)) { key = k; break; } }
+    document.querySelectorAll('.nav-account a').forEach(a => {
+      a.classList.toggle('active', a.dataset.route === key);
+    });
+
+    // anteprima file allegati nel reply
+    const input = document.querySelector('input[type="file"][name="attachments"]');
+    const list = document.getElementById('fileList');
+    if (input && list){
+      input.addEventListener('change', () => {
+        list.innerHTML = '';
+        const files = Array.from(input.files || []);
+        if (files.length > 5){
+          alert('Puoi caricare al massimo 5 allegati.');
+          input.value = '';
+          return;
+        }
+        files.forEach(f => {
+          const li = document.createElement('li');
+          li.textContent = `${f.name} — ${(f.size/1024/1024).toFixed(2)} MB`;
+          list.appendChild(li);
+        });
+      });
+    }
+  })();
+</script>
+{% endblock %}

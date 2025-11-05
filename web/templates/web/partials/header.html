@@ -1,74 +1,92 @@
 {% load static %}
 <header class="header">
-  <div class="main-navigation">
-    <nav class="navbar navbar-expand-lg">
-      <div class="container position-relative">
-        <a class="navbar-brand" href="{% url 'home' %}">
-          <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
-          <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
-        </a>
+    <div class="main-navigation">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container position-relative">
+                <a class="navbar-brand" href="{% url 'home' %}">
+                    <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
+                    <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
+                </a>
 
-        <div class="mobile-menu-right">
-          <div class="nav-search-wrap">
-            <div class="search-btn">
-              <button type="button" class="nav-right-link search-box-outer"><i class="icon-search"></i></button>
-            </div>
-            <div class="search-area">
-              <form action="#">
-                <div class="form-group">
-                  <input type="text" class="form-control" placeholder="Type Keyword...">
-                  <button type="submit" class="search-icon-btn"><i class="icon-search"></i></button>
+                <div class="mobile-menu-right">
+                    <div class="nav-search-wrap">
+                        <div class="search-btn">
+                            <button type="button" class="nav-right-link search-box-outer"><i class="icon-search"></i>
+                            </button>
+                        </div>
+                        <div class="search-area">
+                            <form action="{% url 'search' %}" method="get">
+                                <input type="text" name="q" class="form-control" placeholder="Cerca..."/>
+                                <button type="submit"><i class="icon-search"></i></button>
+                            </form>
+
+                        </div>
+                    </div>
+                    <div class="color-mode theme-mode-control">
+                        <button type="button" class="nav-right-link light-btn"><i class="icon-sun"></i></button>
+                        <button type="button" class="nav-right-link dark-btn"><i class="icon-moon-2"></i></button>
+                    </div>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main_nav"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-mobile-icon"><i class="icon-menu-2"></i></span>
+                    </button>
                 </div>
-              </form>
+
+                <div class="collapse navbar-collapse" id="main_nav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'rivendita' %}">Rivendita</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'funziona' %}">Come funziona</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'vantaggi' %}">Vantaggi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'faq' %}">FAQ</a></li>
+
+                    </ul>
+
+                    <div class="nav-right d-flex align-items-center gap-2">
+                        <div class="nav-search-wrap d-none d-lg-block">
+                            <div class="search-btn">
+                                <button type="button" class="nav-right-link search-box-outer"><i
+                                        class="icon-search"></i></button>
+                            </div>
+                            <div class="search-area">
+                                <form action="{% url 'search' %}" method="get">
+                                    <div class="form-group">
+                                        <input type="text" name="q" class="form-control" placeholder="Cerca..."/>
+                                        <button type="submit" class="search-icon-btn"><i class="icon-search"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="color-mode theme-mode-control d-none d-lg-flex">
+                            <button type="button" class="nav-right-link light-btn"><i class="icon-sun"></i></button>
+                            <button type="button" class="nav-right-link dark-btn"><i class="icon-moon-2"></i></button>
+                        </div>
+
+                        <div class="nav-right-btn">
+                            {% if request.session.api_access %}
+                            <a href="{% url 'account_admin' %}" class="theme-btn theme-btn2" style="margin-right:8px;">
+                                <i class="far fa-user-circle"></i> Area riservata
+                            </a>
+                            <form action="{% url 'logout' %}" method="post" class="d-inline m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="theme-btn">
+                                    <i class="far fa-sign-out"></i> Esci
+                                </button>
+                            </form>
+                            {% else %}
+                            <a href="{% url 'login' %}" class="theme-btn">
+                                <i class="far fa-sign-in"></i> Accedi
+                            </a>
+                            {% endif %}
+                        </div>
+
+
+                    </div>
+                </div>
+
             </div>
-          </div>
-          <div class="color-mode theme-mode-control">
-            <button type="button" class="nav-right-link light-btn"><i class="icon-sun"></i></button>
-            <button type="button" class="nav-right-link dark-btn"><i class="icon-moon-2"></i></button>
-          </div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main_nav"
-                  aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-mobile-icon"><i class="icon-menu-2"></i></span>
-          </button>
-        </div>
-
-        <div class="collapse navbar-collapse" id="main_nav">
-          <ul class="navbar-nav mx-auto">
-            <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'rivendita' %}">Rivendita</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'funziona' %}">Come funziona</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'vantaggi' %}">Vantaggi</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'faq' %}">FAQ</a></li>
-
-          </ul>
-
-          <div class="nav-right d-flex align-items-center gap-2">
-            <div class="nav-search-wrap d-none d-lg-block">
-              <div class="search-btn">
-                <button type="button" class="nav-right-link search-box-outer"><i class="icon-search"></i></button>
-              </div>
-              <div class="search-area">
-                <form action="#">
-                  <div class="form-group">
-                    <input type="text" class="form-control" placeholder="Cerca...">
-                    <button type="submit" class="search-icon-btn"><i class="icon-search"></i></button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div class="color-mode theme-mode-control d-none d-lg-flex">
-              <button type="button" class="nav-right-link light-btn"><i class="icon-sun"></i></button>
-              <button type="button" class="nav-right-link dark-btn"><i class="icon-moon-2"></i></button>
-            </div>
-
-            <div class="nav-right-btn">
-              <a href="/login.html" class="theme-btn"><i class="far fa-sign-in"></i> Accedi</a>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </nav>
-  </div>
+        </nav>
+    </div>
 </header>

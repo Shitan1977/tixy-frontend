@@ -1,0 +1,61 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Ordine confermato | Tixy{% endblock %}
+
+{% block content %}
+<div class="site-breadcrumb" style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container">
+    <h2 class="breadcrumb-title">Ordine confermato</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Conferma</li>
+    </ul>
+  </div>
+</div>
+
+<section class="py-80">
+  <div class="container">
+
+    <div class="checkout-card text-center">
+      <div class="mb-3">
+        <i class="fa-regular fa-circle-check" style="font-size:48px;color:var(--theme-color);"></i>
+      </div>
+      <h3>Grazie! Il tuo ordine è confermato.</h3>
+      <p class="mt-2">ID ordine: <strong>#{{ order.id }}</strong></p>
+      <p>Riceverai una email con i dettagli e le istruzioni per i biglietti.</p>
+
+      <div class="mt-4">
+        <a href="{% url 'home' %}" class="theme-btn theme-btn2">Torna alla Home</a>
+        <a href="{% url 'ordine' order.id %}" class="theme-btn">Vedi dettaglio ordine</a>
+      </div>
+    </div>
+
+    <div class="row g-4 mt-30">
+      <div class="col-lg-6">
+        <div class="summary-box">
+          <h5 class="summary-title">Evento</h5>
+          {% with l=order.listing_info p=order.listing_info.performance_info %}
+          <ul class="event-meta">
+            <li><strong>{{ p.evento_nome }}</strong></li>
+            <li><i class="fa-regular fa-calendar"></i> {{ p.starts_at_utc }}</li>
+            <li><i class="fa-solid fa-location-dot"></i> {{ p.luogo_nome }}</li>
+          </ul>
+          {% endwith %}
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="summary-box">
+          <h5 class="summary-title">Riepilogo</h5>
+          <ul class="event-meta">
+            <li>Quantità: <strong>{{ order.qty }}</strong></li>
+            <li>Totale: <strong>€ {{ order.total|default:order.total_price }}</strong></li>
+            <li>Stato: <strong>{{ order.status }}</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

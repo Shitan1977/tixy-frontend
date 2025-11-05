@@ -1,0 +1,48 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Pagamento PRO | Tixy{% endblock %}
+
+{% block content %}
+<div class="site-breadcrumb" style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
+  <div class="container">
+    <h2 class="breadcrumb-title">Pagamento PRO</h2>
+    <ul class="breadcrumb-menu">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li class="active">Pagamento</li>
+    </ul>
+  </div>
+</div>
+
+<section class="py-80">
+  <div class="container">
+    <div class="seller-card">
+      <h4 class="mb-1">Riepilogo abbonamento PRO</h4>
+      <p class="text-muted mb-3">Evento #{{ event_id }}</p>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+          <div class="seller-card">
+            <ul class="list-unstyled m-0">
+              <li><strong>Periodo:</strong>
+                {% if periodo == 'evento' %} Fino all’evento ({{ giorni }} giorni)
+                {% else %} {{ mesi }} {% if mesi == 1 %}mese{% else %}mesi{% endif %} ({{ giorni }} giorni)
+                {% endif %}
+              </li>
+              <li><strong>Prezzo:</strong> € {{ prezzo }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button type="submit" class="theme-btn">
+          {% if simulated %}<i class="far fa-credit-card"></i> Paga ora (simulazione){% else %}Paga ora{% endif %}
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ next|default:'/' }}">Annulla</a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

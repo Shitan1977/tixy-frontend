@@ -1,20 +1,11 @@
 {% extends "web/base.html" %}
 {% load static %}
 
-{% block title %}FAQ | Tixy{% endblock %}
+{% block title %}Registrazione | Tixy{% endblock %}
 
 {% block content %}
-<!-- breadcrumb -->
-
-<!-- breadcrumb end -->
-        <main class="main">
-
-            <!-- breadcrumb -->
 {% with bc='assets/img/movie/heder_accedi.png' %}
-<div class="site-breadcrumb"
-     style="background-image:url('{% static bc %}')">
-
-
+<div class="site-breadcrumb" style="background-image:url('{% static bc %}')">
   <div class="container">
     <h2 class="breadcrumb-title">Registrazione</h2>
     <ul class="breadcrumb-menu">
@@ -24,61 +15,81 @@
   </div>
 </div>
 {% endwith %}
-            <!-- breadcrumb end -->
 
-            <!-- register area -->
-            <div class="auth-area py-100">
-                <div class="container">
-                    <div class="col-md-5 col-lg-4 mx-auto">
-                        <div class="auth-wrap">
-                            <div class="auth-header">
-                               <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
-                                <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
-                                <p>Crea su Tixy un account</p>
-                            </div>
-                            <div class="auth-form">
-                                <form action="#">
-                                    <div class="form-group">
-                                        <label>Nome</label>
-                                        <input type="text" class="form-control" placeholder="Your Name">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Email</label>
-                                        <input type="email" class="form-control" placeholder="Your Email">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Password</label>
-                                        <input type="password" class="form-control" placeholder="Your Password">
-                                    </div>
-                                    <div class="auth-check">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="" id="agree">
-                                            <label class="form-check-label" for="agree">
-                                                Accetta i  <a href="#">Termini e condizioni.</a>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="auth-btn">
-                                        <button type="submit" class="theme-btn"><span class="far fa-paper-plane"></span>Registrazione</button>
-                                    </div>
-                                </form>
-                                <div class="auth-footer">
-                                    <div class="auth-social">
-                                        <span class="auth-divider">or</span>
-                                        <div class="auth-social-list">
-                                            <a href="#" class="auth-fb"><i class="fab fa-facebook-f"></i>Facebook</a>
-                                            <a href="#" class="auth-gl"><i class="fab fa-google"></i>Google</a>
-                                            <a href="#" class="auth-tw"><i class="fab fa-x-twitter"></i>Twitter</a>
-                                        </div>
-                                    </div>
-                                    <p>Hai già un account? <a href="login.html">Entra.</a></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<main class="main">
+  <div class="auth-area py-100">
+    <div class="container">
+      <div class="col-md-6 col-lg-5 mx-auto">
+        <div class="auth-wrap">
+          <div class="auth-header text-center mb-3">
+            <img src="{% static 'assets/img/logo/moon.png' %}" class="logo-dark-mode" alt="logo">
+            <img src="{% static 'assets/img/logo/sun.png' %}" class="logo-light-mode" alt="logo">
+            <p>Crea un account per iniziare a usare Tixy</p>
+          </div>
+
+          <div class="auth-form">
+            <form action="{% url 'registrazione' %}" method="post" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ next|default:'' }}">
+
+              <div class="form-group mb-3">
+                <label for="id_first_name">Nome *</label>
+                <input id="id_first_name" name="first_name" type="text"
+                       class="form-control" placeholder="Nome" required
+                       value="{{ request.POST.first_name|default:'' }}">
+              </div>
+
+              <div class="form-group mb-3">
+                <label for="id_last_name">Cognome *</label>
+                <input id="id_last_name" name="last_name" type="text"
+                       class="form-control" placeholder="Cognome" required
+                       value="{{ request.POST.last_name|default:'' }}">
+              </div>
+
+              <div class="form-group mb-3">
+                <label for="id_email">Email *</label>
+                <input id="id_email" name="email" type="email"
+                       class="form-control" placeholder="you@example.com" required
+                       value="{{ request.POST.email|default:'' }}">
+              </div>
+
+              <div class="form-group mb-3">
+                <label for="id_password">Password *</label>
+                <input id="id_password" name="password" type="password"
+                       class="form-control" placeholder="Minimo 8 caratteri" required>
+              </div>
+
+              <div class="form-check mb-3">
+                <input id="id_terms" name="accepted_terms" class="form-check-input" type="checkbox" value="1"
+                       {% if request.POST.accepted_terms %}checked{% endif %}>
+                <label class="form-check-label" for="id_terms">
+                  Accetto i <a href="{% url 'termini' %}">Termini</a> *
+                </label>
+              </div>
+
+              <div class="form-check mb-3">
+                <input id="id_privacy" name="accepted_privacy" class="form-check-input" type="checkbox" value="1"
+                       {% if request.POST.accepted_privacy %}checked{% endif %}>
+                <label class="form-check-label" for="id_privacy">
+                  Accetto la <a href="{% url 'privacy' %}">Privacy</a> *
+                </label>
+              </div>
+
+              <div class="auth-btn text-center">
+                <button type="submit" class="theme-btn"><span class="far fa-user-plus"></span> Registrati</button>
+              </div>
+
+            </form>
+
+            <div class="auth-footer text-center mt-3">
+              <p>Hai già un account? <a href="{% url 'login' %}">Accedi.</a></p>
+              <p><a href="{% url 'password_forgot' %}">Ritrova password</a> · <a href="{% url 'verifica-otp' %}">Rinvia OTP</a></p>
             </div>
-            <!-- register area end -->
 
-        </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
 {% endblock %}

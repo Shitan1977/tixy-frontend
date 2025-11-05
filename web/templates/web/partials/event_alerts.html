@@ -1,0 +1,66 @@
+<section id="alerts" class="py-20">
+  <div class="container">
+    <div class="row g-4">
+
+      <!-- Notifiche gratuite -->
+      <div class="col-12 col-lg-8">
+        <div class="seller-card">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="fa-regular fa-bell"></i>
+            <h4 class="m-0">Attiva notifiche gratuite</h4>
+          </div>
+
+          {% if request.GET.alert == "ok" %}
+            <div class="alert alert-success mb-3">Notifiche attivate per questo evento.</div>
+          {% elif request.GET.alert == "err" %}
+            <div class="alert alert-danger mb-3">Non sono riuscito ad attivare le notifiche. Riprova.</div>
+          {% endif %}
+
+          <p class="text-muted mb-3">
+            Ti avvisiamo quando compaiono biglietti per questo evento su Tixy.
+          </p>
+
+          <form method="post"
+                action="{% url 'attiva_alert' perf.evento %}"
+                class="js-one-click d-flex gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
+            <button type="submit" class="theme-btn theme-btn2" {% if following %}disabled{% endif %}>
+              {% if following %}Notifiche attive ✓{% else %}
+                <i class="fa-regular fa-bell"></i> Attiva notifiche
+              {% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Alert PRO (abbonamento) -->
+      <div class="col-12 col-lg-4">
+        <div class="seller-card h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="fa-solid fa-crown"></i>
+            <h4 class="m-0">Alert PRO</h4>
+          </div>
+          <p class="text-muted mb-3">
+            Monitoraggio più frequente. (Da € 6,99)
+          </p>
+          <a class="theme-btn w-100"
+             href="{% url 'attiva_pro' %}?event={{ perf.evento }}&next={{ request.get_full_path|urlencode }}">
+            Attiva PRO
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<script>
+  // evita doppi invii
+  document.querySelectorAll('form.js-one-click').forEach(function (f) {
+    f.addEventListener('submit', function () {
+      var btn = f.querySelector('button[type="submit"]');
+      if (btn && !btn.disabled) { btn.disabled = true; btn.innerHTML = 'Attivazione...'; }
+    });
+  });
+</script>

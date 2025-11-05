@@ -7572,3 +7572,8 @@ label {
   padding:6px 10px; border-radius:999px; font-size:.92rem;
 }
 .seller-tags .chip i{ color:var(--theme-color); }
+.stars-link { text-decoration: none; }
+.movie-item .seller .stars-link { position: relative; z-index: 3; display: inline-block; }
+.movie-item .seller .stars { pointer-events: none; }  /* il click lo prende l'anchor */
+.seller-link { text-decoration: none; }
+.movie-item .seller .seller-link { position: relative; z-index: 5; display: inline-block; }

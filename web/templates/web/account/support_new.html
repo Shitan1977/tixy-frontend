@@ -1,0 +1,236 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Supporto — Nuovo ticket{% endblock %}
+{% block body_class %}account account-support{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Area Riservata</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Assistenza &amp; ticket</p>
+    </div>
+    <div>
+      <a class="btn btn-light" href="{% url 'account_support_list' %}">
+        <i class="far fa-arrow-left me-2"></i> Torna ai ticket
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- WRAP -->
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+
+      <!-- SIDEBAR -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+              <i class="far fa-gauge-high"></i> Dashboard
+            </a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+              <i class="far fa-bell"></i> I miei Alert
+            </a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+              <i class="far fa-crown"></i> Abbonamenti
+            </a>
+            <a class="nav-item" href="{% url 'account_tickets' %}" data-route="acquisti">
+              <i class="far fa-bag-shopping"></i> Acquisti
+            </a>
+            <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita">
+              <i class="far fa-tags"></i> Rivendita
+            </a>
+            <a class="nav-item active" href="{% url 'account_support_list' %}" data-route="assistenza">
+              <i class="far fa-life-ring"></i> Assistenza
+            </a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo">
+              <i class="far fa-user-shield"></i> Profilo &amp; Sicurezza
+            </a>
+            {% if profilo.is_staff %}
+            <a class="nav-item" href="{{ API_BASE_URL|default:'#' }}/admin/" target="_blank" rel="noopener">
+              <i class="far fa-screwdriver-wrench"></i> Backoffice
+            </a>
+            {% endif %}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="col-lg-9">
+        <form class="card card-ghost" action="{% url 'account_support_new' %}" method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+              <h4 class="m-0">Nuovo ticket di supporto</h4>
+              <small class="text-muted">Apri una richiesta: ti risponderemo via email e qui nell’area riservata</small>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="far fa-paper-plane me-2"></i> Invia
+            </button>
+          </div>
+
+          {% if messages %}
+          <div class="px-3 pt-3">
+            {% for m in messages %}
+              <div class="alert alert-{{ m.tags|default:'info' }} mb-3">{{ m }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label">Titolo <span class="text-danger">*</span></label>
+                <input type="text" name="title" class="form-control" maxlength="120"
+                       placeholder="Es. Problema download biglietto" required
+                       value="{{ form.title|default:'' }}">
+                <div class="form-text">Massimo 120 caratteri.</div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Categoria <span class="text-danger">*</span></label>
+                <!-- UI only: NON viene inviata all'API -->
+                <select name="category_ui" class="form-select" required>
+                  {% for c in categories %}
+                    <option value="{{ c.value }}" {% if form.category|default:'generale' == c.value %}selected{% endif %}>
+                      {{ c.label }}
+                    </option>
+                  {% empty %}
+                    <option value="generale" selected>Generale</option>
+                    <option value="pagamenti">Pagamenti</option>
+                    <option value="download">Download biglietti</option>
+                    <option value="rivendita">Rivendita</option>
+                    <option value="altro">Altro</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Priorità <span class="text-danger">*</span></label>
+                <!-- UI only: NON viene inviata all'API -->
+                <select name="priority_ui" class="form-select" required>
+                  {% for p in priorities %}
+                    <option value="{{ p.value }}" {% if form.priority|default:'media' == p.value %}selected{% endif %}>
+                      {{ p.label }}
+                    </option>
+                  {% empty %}
+                    <option value="bassa">Bassa</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="critica">Critica</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Ordine (opzionale)</label>
+                <input type="number" name="order_id" class="form-control" placeholder="ID ordine se rilevante"
+                       value="{{ form.order_id|default:request.GET.order|default:'' }}">
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Descrizione dettagliata <span class="text-danger">*</span></label>
+                <textarea name="message" class="form-control" rows="6" minlength="10" maxlength="4000"
+                          placeholder="Descrivi il problema, i passaggi per riprodurlo e cosa ti aspetti."
+                          required
+                          oninput="document.getElementById('msgCount').textContent=this.value.length">{{ form.message|default:'' }}</textarea>
+                <div class="d-flex justify-content-between">
+                  <div class="form-text">Puoi incollare anche testo di errore o codice.</div>
+                  <small class="text-muted"><span id="msgCount">{{ form.message|default:''|length }}</span>/4000</small>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Allegati (PDF, PNG, JPG) — max 5</label>
+                <input type="file" name="attachments" class="form-control" accept=".pdf,.png,.jpg,.jpeg" multiple>
+                <div class="form-text">Screenshot, ricevute, ecc. Dimensione consigliata &lt; 10MB per file.</div>
+                <ul class="small text-muted mt-2 mb-0" id="fileList" style="list-style: disc; padding-left: 18px;"></ul>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="privacy_ok" id="privacy_ok" required
+                         {% if form.privacy_ok %}checked{% endif %}>
+                  <label class="form-check-label" for="privacy_ok">
+                    Dichiaro di aver letto l’informativa privacy e accetto il trattamento dei dati ai fini dell’assistenza.
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <a href="{% url 'account_support_list' %}" class="btn btn-light">Annulla</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="far fa-paper-plane me-2"></i> Invia ticket
+            </button>
+          </div>
+        </form>
+      </div><!-- /col-lg-9 -->
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // attiva la voce Assistenza nel menu
+    const path = (location.pathname || '/').replace(/\/+$/,'').toLowerCase();
+    const rules = [
+      ['abbonamenti', ['/account/abbonamenti','abbonamenti','subscription','subscriptions']],
+      ['alert',       ['/account/alerts','alert','alerts']],
+      ['rivendita',   ['rivendita']],
+      ['assistenza',  ['assistenza','supporto','help','/account/support']],
+      ['profilo',     ['profilo','profile','sicurezza']],
+      ['acquisti',    ['/account/tickets','acquisti']],
+      ['dashboard',   ['/account','dashboard']],
+    ];
+    function matches(tokens){
+      return tokens.some(t => t.startsWith('/') ? path.startsWith(t.toLowerCase())
+                                               : path.includes(t.toLowerCase()));
+    }
+    let key = 'assistenza';
+    for (const [k, toks] of rules){ if (matches(toks)) { key = k; break; } }
+    document.querySelectorAll('.nav-account a').forEach(a => {
+      a.classList.toggle('active', a.dataset.route === key);
+    });
+
+    // anteprima file allegati
+    const input = document.querySelector('input[type="file"][name="attachments"]');
+    const list  = document.getElementById('fileList');
+    if (input){
+      input.addEventListener('change', () => {
+        list.innerHTML = '';
+        const files = Array.from(input.files || []);
+        if (files.length > 5){
+          alert('Puoi caricare al massimo 5 allegati.');
+          input.value = '';
+          return;
+        }
+        files.forEach(f => {
+          const li = document.createElement('li');
+          li.textContent = `${f.name} — ${(f.size/1024/1024).toFixed(2)} MB`;
+          list.appendChild(li);
+        });
+      });
+    }
+  })();
+</script>
+{% endblock %}

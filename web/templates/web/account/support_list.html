@@ -1,0 +1,189 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Supporto — I miei ticket{% endblock %}
+{% block body_class %}account account-support{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Area Riservata</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Assistenza &amp; ticket</p>
+    </div>
+    <div>
+      <a class="theme-btn" href="{% url 'account_support_new' %}">
+        <i class="far fa-plus me-2"></i> Nuovo ticket
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- WRAP -->
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+
+      <!-- SIDEBAR -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+              <i class="far fa-gauge-high"></i> Dashboard
+            </a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+              <i class="far fa-bell"></i> I miei Alert
+            </a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+              <i class="far fa-crown"></i> Abbonamenti
+            </a>
+            <a class="nav-item" href="{% url 'account_tickets' %}" data-route="acquisti">
+              <i class="far fa-bag-shopping"></i> Acquisti
+            </a>
+            <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita">
+              <i class="far fa-tags"></i> Rivendita
+            </a>
+            <a class="nav-item active" href="{% url 'account_support_list' %}" data-route="assistenza">
+              <i class="far fa-life-ring"></i> Assistenza
+            </a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo">
+              <i class="far fa-user-shield"></i> Profilo &amp; Sicurezza
+            </a>
+            {% if profilo.is_staff %}
+            <a class="nav-item" href="{{ API_BASE_URL|default:'#' }}/admin/" target="_blank" rel="noopener">
+              <i class="far fa-screwdriver-wrench"></i> Backoffice
+            </a>
+            {% endif %}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="col-lg-9">
+        <div class="card card-ghost">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+              <h4 class="m-0">Supporto — I miei ticket</h4>
+              <small class="text-muted">Gestisci le richieste aperte con il nostro team</small>
+            </div>
+            <a class="btn btn-primary" href="{% url 'account_support_new' %}">
+              <i class="far fa-plus me-2"></i> Nuovo ticket
+            </a>
+          </div>
+
+          {% if messages %}
+          <div class="px-3 pt-3">
+            {% for m in messages %}
+              <div class="alert alert-{{ m.tags|default:'info' }} mb-3">{{ m }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="card-body p-0">
+            {% if page_obj.object_list %}
+              <div class="table-responsive">
+                <table class="table table-striped align-middle table-admin mb-0">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Titolo</th>
+                      <th>Categoria</th>
+                      <th>Priorità</th>
+                      <th>Stato</th>
+                      <th>Creato</th>
+                      <th>Aggiornato</th>
+                      <th class="text-end"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for t in page_obj.object_list %}
+                    <tr>
+                      <td class="text-muted">#{{ t.id }}</td>
+                      <td class="fw-semibold">{{ t.title }}</td>
+                      <td>{{ t.category }}</td>
+                      <td>{{ t.priority }}</td>
+                      <td>
+                        <span class="badge badge-soft {% if t.status == 'Aperto' or t.status == 'Open' %}warning{% elif t.status == 'Chiuso' or t.status == 'Closed' %}secondary{% else %}info{% endif %}">
+                          {{ t.status }}
+                        </span>
+                      </td>
+                      <td>{{ t.created_fmt }}</td>
+                      <td>{{ t.updated_fmt }}</td>
+                      <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'account_support_detail' t.id %}">
+                          Apri
+                        </a>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- PAGINATION (l’API è già paginata; mostriamo la pagina corrente) -->
+              <div class="p-3 border-top d-flex justify-content-between align-items-center">
+                <small class="text-muted">Totale: {{ total|default:page_obj.paginator.count }}</small>
+                <div>
+                  {% if page_obj.has_previous %}
+                  <a class="btn btn-sm btn-light" href="?page={{ page_obj.previous_page_number }}"><i class="far fa-angle-left me-1"></i> Prev</a>
+                  {% endif %}
+                  <span class="mx-2 small text-muted">Pagina {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                  {% if page_obj.has_next %}
+                  <a class="btn btn-sm btn-light" href="?page={{ page_obj.next_page_number }}">Next <i class="far fa-angle-right ms-1"></i></a>
+                  {% endif %}
+                </div>
+              </div>
+            {% else %}
+              <div class="p-5 text-center">
+                <p class="mb-3">Non hai ancora ticket aperti.</p>
+                <a class="theme-btn" href="{% url 'account_support_new' %}">Apri il primo ticket</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div><!-- /col-lg-9 -->
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // normalizzo path senza trailing slash
+    const path = (location.pathname || '/').replace(/\/+$/,'').toLowerCase();
+    const rules = [
+      ['abbonamenti', ['/account/abbonamenti', 'abbonamenti', 'subscription', 'subscriptions']],
+      ['alert',       ['/account/alerts', 'alert', 'alerts']],
+      ['rivendita',   ['rivendita']],
+      ['assistenza',  ['assistenza','supporto','help','/account/support']],
+      ['profilo',     ['profilo','profile','sicurezza']],
+      ['acquisti',    ['/account/tickets','acquisti']],
+      ['dashboard',   ['/account', 'dashboard']],
+    ];
+    function matches(tokens){
+      return tokens.some(t => {
+        t = t.toLowerCase();
+        if (t.startsWith('/')) return path.startsWith(t);
+        return path.includes(t);
+      });
+    }
+    let key = 'dashboard';
+    for (const [k, tokens] of rules){ if (matches(tokens)) { key = k; break; } }
+    document.querySelectorAll('.nav-account a')
+      .forEach(a => a.classList.toggle('active', a.dataset.route === key));
+  })();
+</script>
+{% endblock %}

@@ -1,730 +1,425 @@
 {% extends "web/base.html" %}
 {% block title %}Home | Tixy{% endblock %}
 {% load static %}
+
 {% block content %}
-  <main class="main">
+<main class="main">
 
-            <!-- hero slider -->
-            <div class="hero-section">
-                <div class="hero-slider owl-carousel owl-theme">
-                    <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafic_3_simple.png' %}')">
-                        <div class="container">
-                            <div class="row align-items-center">
-                                <div class="col-md-8 col-lg-6">
-                                    <div class="hero-content">
-                                        <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">
-                                            Concerti Live
-                                        </h6>
-                                        <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">
-                                            I grandi concerti vicino a te
-                                        </h1>
-                                        <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
-                                            <span class="rating"><span><i class="far fa-star"></i> Top</span>Eventi</span>
-                                            <span class="year">Aggiornato oggi</span>
-                                            <span class="time">Biglietti disponibili</span>
-                                            <div class="genre">
-                                                <a href="#">Concerti,</a>
-                                                <a href="#">Live</a>
-                                            </div>
-                                        </div>
-                                        <p data-animation="fadeInRight" data-delay="1s">
-                                            Vivi l’emozione del live: scegli la data, prenota ora e non perderti lo spettacolo!
-                                        </p>
-                                        <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
-                                            <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
-                                            <a href="{% url 'funziona' %}" class="theme-btn theme-btn2">Come Funziona</a>
-                                        </div>
-                                    </div>
-                                </div>
+  <!-- HERO -->
+  <div class="hero-section">
+    <div class="hero-slider owl-carousel owl-theme">
 
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafic_simple.png' %}')">
-                        <div class="container">
-                            <div class="row align-items-center">
-                                <div class="col-md-8 col-lg-6">
-                                    <div class="hero-content">
-                                        <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">
-                                            Eventi Sportivi
-                                        </h6>
-                                        <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">
-                                            Vivi lo sport dal vivo
-                                        </h1>
-                                        <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
-                                            <span class="rating"><span><i class="far fa-star"></i> Big</span>Match</span>
-                                            <span class="year">Prossime date</span>
-                                            <span class="time">Posti limitati</span>
-                                            <div class="genre">
-                                                <a href="#">Calcio,</a>
-                                                <a href="#">Basket</a>
-                                            </div>
-                                        </div>
-                                        <p data-animation="fadeInRight" data-delay="1s">
-                                            Entra in campo con i tuoi campioni: assicurati ora i biglietti per partite indimenticabili.
-                                        </p>
-                                        <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
-                                            <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
-                                            <a href="{% url 'vantaggi' %}" class="theme-btn theme-btn2">Perché sceglierci</a>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                    <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafica_simple.png' %}')">
-                        <div class="container">
-                            <div class="row align-items-center">
-                                <div class="col-md-8 col-lg-6">
-                                    <div class="hero-content">
-                                        <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">
-                                            Spettacoli &amp; Teatro
-                                        </h6>
-                                        <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">
-                                            Emozioni tra palcoscenico e musical
-                                        </h1>
-                                        <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
-                                            <span class="rating"><span><i class="far fa-star"></i> Best</span>Show</span>
-                                            <span class="year">In cartellone</span>
-                                            <span class="time">Acquisto sicuro</span>
-                                            <div class="genre">
-                                                <a href="#">Teatro,</a>
-                                                <a href="#">Musical</a>
-                                            </div>
-                                        </div>
-                                        <p data-animation="fadeInRight" data-delay="1s">
-                                            Dal teatro ai musical: scegli l’evento e lasciati sorprendere dal vivo.
-                                        </p>
-                                        <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
-                                            <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
-                                            <a href="{% url 'top' %}" class="theme-btn theme-btn2">Top Venditore</a>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
+      <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafic_3_simple.png' %}')">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-md-8 col-lg-6">
+              <div class="hero-content">
+                <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">Concerti Live</h6>
+                <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">I grandi concerti vicino a te</h1>
+                <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
+                  <span class="rating"><span><i class="far fa-star"></i> Top</span>Eventi</span>
+                  <span class="year">Aggiornato oggi</span>
+                  <span class="time">Biglietti disponibili</span>
+                  <div class="genre">
+                    <a href="#">Concerti,</a>
+                    <a href="#">Live</a>
+                  </div>
                 </div>
+                <p data-animation="fadeInRight" data-delay="1s">
+                  Vivi l’emozione del live: scegli la data, prenota ora e non perderti lo spettacolo!
+                </p>
+                <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
+                  <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
+                  <a href="{% url 'funziona' %}" class="theme-btn theme-btn2">Come Funziona</a>
+                </div>
+              </div>
             </div>
-            <!-- hero slider end -->
+          </div>
+        </div>
+      </div>
 
-
-            <!-- MOTORE DI RICERCA - SOLO INPUT -->
-            <section class="filter-area3 pt-80 pb-40">
-                <div class="container">
-                    <div class="filter-wrap">
-                        <form action="ricerca.html" method="get">
-                            <div class="row g-4 align-items-center">
-
-                                <!-- Keywords -->
-                                <div class="col-xl-6 col-lg-6">
-                                    <div class="filter-search">
-                                        <div class="form-group">
-                                            <input type="text" name="query" class="form-control"
-                                                   placeholder="Cerca evento, artista o città…">
-                                            <button type="submit" aria-label="Cerca"><i class="icon-search"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Data (singola) -->
-                                <div class="col-xl-2 col-lg-3 col-md-4">
-                                    <div class="filter-input">
-                                        <input type="date" name="date" class="form-control" placeholder="Data">
-                                    </div>
-                                </div>
-
-                                <!-- Località -->
-                                <div class="col-xl-2 col-lg-3 col-md-4">
-                                    <div class="filter-input">
-                                        <input type="text" name="location" class="form-control" placeholder="Località">
-                                    </div>
-                                </div>
-
-                                <!-- Bottone -->
-                                <div class="col-xl-2 col-lg-12 col-md-4">
-                                    <div class="filter-btn text-xl-end">
-                                        <button type="submit" class="theme-btn w-100 w-xl-auto">
-                                            <span class="fas fa-search"></span> Cerca
-                                        </button>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </form>
-                    </div>
+      <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafic_simple.png' %}')">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-md-8 col-lg-6">
+              <div class="hero-content">
+                <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">Eventi Sportivi</h6>
+                <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">Vivi lo sport dal vivo</h1>
+                <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
+                  <span class="rating"><span><i class="far fa-star"></i> Big</span>Match</span>
+                  <span class="year">Prossime date</span>
+                  <span class="time">Posti limitati</span>
+                  <div class="genre">
+                    <a href="#">Calcio,</a>
+                    <a href="#">Basket</a>
+                  </div>
                 </div>
-            </section>
-
-            <!-- latest movie -->
-            <div class="movie-area pt-70">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="site-heading-inline">
-                                <h2 class="site-title">Top venditore</h2>
-                                <a href="{% url 'top' %}" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="movie-slider owl-carousel owl-theme">
-
-                        <!-- CARD 1 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TOP</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento-singolo.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title">
-                                    <a href="evento-singolo.html">Marco Mengoni: Live in Europe 2025</a>
-                                </h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Unipol Forum  (MI)</li>
-                                    <li><i class="far fa-calendar"></i> Lun 13 Ott, 21:00</li>
-                                </ul>
-                                <div class="movie-footer">
-                                    <div class="seller">
-                                        <span class="seller-name">Venditore: <strong>TicketTop</strong></span>
-                                        <span class="stars" aria-label="Valutazione 4.8 su 5">
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star-half-alt"></i>
-                                            <span class="rating-num">4.8</span>
-                                            <span class="rating-count">(120)</span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <!-- CARD 2 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TOP</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento-singolo.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title">
-                                    <a href="evento-singolo.html">Laura Pausini – World Tour</a>
-                                </h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Palazzo dello Sport, Roma</li>
-                                    <li><i class="far fa-calendar"></i> Sab 25 Ott, 21:00</li>
-                                </ul>
-                                <div class="movie-footer">
-                                    <div class="seller">
-                                        <span class="seller-name">Venditore: <strong>TicketTop</strong></span>
-                                        <span class="stars" aria-label="Valutazione 4.8 su 5">
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star-half-alt"></i>
-                                            <span class="rating-num">4.8</span>
-                                            <span class="rating-count">(120)</span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <!-- CARD 3 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TOP</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento-singolo.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title">
-                                    <a href="evento-singolo.html">Coldplay – Music of the Spheres</a>
-                                </h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Stadio San Siro, Milano</li>
-                                    <li><i class="far fa-calendar"></i> Gio 5 Set, 20:45</li>
-                                </ul>
-                                <div class="movie-footer">
-                                    <div class="seller">
-                                        <span class="seller-name">Venditore: <strong>LiveArena</strong></span>
-                                        <span class="stars" aria-label="Valutazione 4.7 su 5">
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="far fa-star"></i>
-                                            <span class="rating-num">4.7</span>
-                                            <span class="rating-count">(315)</span>
-                                        </span>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CARD 4 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TOP</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento-singolo.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title">
-                                    <a href="evento-singolo.html">Juventus vs Milan</a>
-                                </h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Allianz Stadium, Torino</li>
-                                    <li><i class="far fa-calendar"></i> Dom 2 Nov, 20:45</li>
-                                </ul>
-                                <div class="movie-footer">
-                                    <div class="seller">
-                                        <span class="seller-name">Venditore: <strong>TicketTop</strong></span>
-                                        <span class="stars" aria-label="Valutazione 4.8 su 5">
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                            <i class="fas fa-star-half-alt"></i>
-                                            <span class="rating-num">4.8</span>
-                                            <span class="rating-count">(120)</span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                    </div><!-- /.movie-slider -->
+                <p data-animation="fadeInRight" data-delay="1s">Entra in campo con i tuoi campioni: assicurati ora i biglietti.</p>
+                <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
+                  <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
+                  <a href="{% url 'vantaggi' %}" class="theme-btn theme-btn2">Perché sceglierci</a>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-single" style="background: url('{% static 'assets/img/slider/grafica_simple.png' %}')">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-md-8 col-lg-6">
+              <div class="hero-content">
+                <h6 class="hero-sub-title" data-animation="fadeInDown" data-delay=".25s">Spettacoli &amp; Teatro</h6>
+                <h1 class="hero-title" data-animation="fadeInLeft" data-delay=".50s">Emozioni tra palcoscenico e musical</h1>
+                <div class="hero-info" data-animation="fadeInDown" data-delay=".75s">
+                  <span class="rating"><span><i class="far fa-star"></i> Best</span>Show</span>
+                  <span class="year">In cartellone</span>
+                  <span class="time">Acquisto sicuro</span>
+                  <div class="genre">
+                    <a href="#">Teatro,</a>
+                    <a href="#">Musical</a>
+                  </div>
+                </div>
+                <p data-animation="fadeInRight" data-delay="1s">Scegli l’evento e lasciati sorprendere dal vivo.</p>
+                <div class="hero-btn" data-animation="fadeInUp" data-delay="1.25s">
+                  <a href="{% url 'rivendita' %}" class="theme-btn"><span class="icon-play-3"></span> Scopri gli Eventi</a>
+                  <a href="{% url 'top' %}" class="theme-btn theme-btn2">Top Venditore</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <!-- /HERO -->
+
+  <!-- MOTORE DI RICERCA -->
+  <section class="filter-area3 pt-80 pb-40">
+    <div class="container">
+      <div class="filter-wrap">
+        <form action="{% url 'search' %}" method="get">
+          <div class="row g-4 align-items-center">
+            <div class="col-xl-6 col-lg-6">
+              <div class="filter-search">
+                <div class="form-group">
+                  <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Cerca evento, artista o città…">
+                  <button type="submit" aria-label="Cerca"><i class="icon-search"></i></button>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4">
+              <div class="filter-input">
+                <input type="date" name="date" class="form-control" value="{{ date }}" placeholder="Data">
+              </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4">
+              <div class="filter-input">
+                <input type="text" name="localita" class="form-control" value="{{ city }}" placeholder="Località">
+              </div>
+            </div>
+            <div class="col-xl-2 col-lg-12 col-md-4">
+              <div class="filter-btn text-xl-end">
+                <button type="submit" class="theme-btn w-100 w-xl-auto">
+                  <span class="fas fa-search"></span> Cerca
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <!-- /MOTORE DI RICERCA -->
+
+  <!-- TOP VENDITORE -->
+  <div class="movie-area pt-70">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <div class="site-heading-inline">
+            <h2 class="site-title">Top venditore</h2>
+            <a href="{% url 'top' %}" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
+          </div>
+        </div>
+      </div>
+
+      {% with items=top_listings %}
+      {% with count=items|length %}
+      {% if count == 0 %}
+        <p class="text-muted">Nessun top venditore al momento.</p>
+
+      {% elif count == 1 or count == 3 %}
+      <div class="row g-4">
+        {% for item in items %}
+        {% with perfid=item.perf_id|default:item.performance_info.id %}
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="movie-item">
+            <span class="movie-quality">TOP</span>
+
+            <div class="movie-img">
+              <img src="{% static 'assets/img/movie/stock.png' %}" alt="{{ item.performance_info.evento_nome|default:'Evento' }}">
+              <a href="{% if perfid %}{% url 'event-listings' perfid %}{% else %}#{% endif %}" class="movie-play" aria-label="Apri dettagli">
+                <i class="icon-play-3"></i>
+              </a>
             </div>
 
-            <!-- latest movie end -->
+            <div class="movie-content">
+              <h6 class="movie-title">{{ item.performance_info.evento_nome|default:"Evento" }}</h6>
 
+              <ul class="event-meta">
+                <li><i class="far fa-location-dot"></i> {{ item.performance_info.luogo_nome|default:"" }}</li>
+                <li><i class="far fa-calendar"></i> {{ item.starts_fmt }}</li>
+              </ul>
 
-            <!-- trending movie -->
-            <div class="movie-area pt-70">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="site-heading-inline">
-                                <h2 class="site-title">Eventi del Mese</h2>
-                                <a href="eventi_mese.html" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
+              <div class="movie-footer">
+                <div class="seller">
 
-                    <div class="movie-slider owl-carousel owl-theme">
+                  {# ===== Link RECENSIONI robusto (nome venditore + stelle) ===== #}
+                  {% with seller_id=item.seller|default:item.seller_info.id %}
+                  {% with perf_id=item.performance|default:item.performance_info.id|default:item.perf_id %}
+                    <span class="seller-name">
+                      Venditore:
+                      {% if seller_id %}
+                        <a class="seller-link"
+                           href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni">
+                          <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
+                        </a>
+                      {% else %}
+                        <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
+                      {% endif %}
+                    </span>
 
-                        <!-- 1 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Laura Pausini – World Tour</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Palazzo dello Sport, Roma</li>
-                                    <li><i class="far fa-calendar"></i> Sab 25 Ott, 21:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">265</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">269</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">70</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    {% if item.seller_rating_avg %}
+                      {% if seller_id %}
+                        <a class="stars-link"
+                           href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni"
+                           title="Vedi recensioni">
+                          <span class="stars" aria-label="Valutazione {{ item.seller_rating_avg }} su 5">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                            <span class="rating-num">{{ item.seller_rating_avg }}</span>
+                            {% if item.seller_reviews_count %}
+                              <span class="rating-count">({{ item.seller_reviews_count }})</span>
+                            {% endif %}
+                          </span>
+                        </a>
+                      {% else %}
+                        <span class="stars" aria-label="Valutazione {{ item.seller_rating_avg }} su 5">
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                          <i class="fas fa-star-half-alt"></i>
+                          <span class="rating-num">{{ item.seller_rating_avg }}</span>
+                          {% if item.seller_reviews_count %}
+                            <span class="rating-count">({{ item.seller_reviews_count }})</span>
+                          {% endif %}
+                        </span>
+                      {% endif %}
+                    {% endif %}
+                  {% endwith %}
+                  {% endwith %}
+                  {# ===== /Link RECENSIONI ===== #}
 
-                        <!-- 2 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Marco Mengoni: Live in Europe 2025</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Mediolanum Forum,  (MI)</li>
-                                    <li><i class="far fa-calendar"></i> Lun 13 Ott, 21:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">180</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">320</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">95</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                              <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Coldplay – Music of the Spheres</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Stadio San Siro, Milano</li>
-                                    <li><i class="far fa-calendar"></i> Gio 5 Set, 20:45</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">72</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">540</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">210</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 4 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TEATRO</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">La Traviata – Teatro alla Scala</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Teatro alla Scala, Milano</li>
-                                    <li><i class="far fa-calendar"></i> Ven 8 Nov, 20:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">46</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">190</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">65</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 5 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">SPORT</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">NBA European Tour – Milano</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Mediolanum Forum,  (MI)</li>
-                                    <li><i class="far fa-calendar"></i> Mar 18 Nov, 19:30</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">120</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">410</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">88</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 6 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">SHOW</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Cirque du Soleil – OVO</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> PalaEur, Roma</li>
-                                    <li><i class="far fa-calendar"></i> Dom 1 Dic, 18:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">98</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">260</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">120</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div><!-- /.movie-slider -->
                 </div>
+              </div>
             </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
 
-            <!-- trending movie end -->
+      {% else %}
+      <div class="movie-slider owl-carousel owl-theme">
+        {% for item in items %}
+        {% with perfid=item.performance|default:item.performance_info.id %}
+        <div class="movie-item">
+          <span class="movie-quality">TOP</span>
 
-            <div class="movie-area pt-70">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="site-heading-inline">
-                                <h2 class="site-title">Ultimi Eventi</h2>
-                                <a href="eventi_mese.html" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
+          <div class="movie-img">
+            <img src="{% static 'assets/img/movie/stock.png' %}" alt="{{ item.performance_info.evento_nome|default:'Evento' }}">
+            <a href="{% if perfid %}{% url 'event-listings' perfid %}{% else %}#{% endif %}" class="movie-play" aria-label="Apri dettagli">
+              <i class="icon-play-3"></i>
+            </a>
+          </div>
 
-                    <div class="movie-slider owl-carousel owl-theme">
+          <div class="movie-content">
+            <h6 class="movie-title">{{ item.performance_info.evento_nome|default:"Evento" }}</h6>
 
-                        <!-- 1 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Laura Pausini – World Tour</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Palazzo dello Sport, Roma</li>
-                                    <li><i class="far fa-calendar"></i> Sab 25 Ott, 21:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">265</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">269</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">70</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <ul class="event-meta">
+              <li><i class="far fa-location-dot"></i> {{ item.performance_info.luogo_nome|default:"" }}</li>
+              <li><i class="far fa-calendar"></i> {{ item.starts_fmt }}</li>
+            </ul>
 
-                        <!-- 2 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Marco Mengoni: Live in Europe 2025</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Mediolanum Forum,  (MI)</li>
-                                    <li><i class="far fa-calendar"></i> Lun 13 Ott, 21:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">180</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">320</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">95</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <div class="movie-footer">
+              <div class="seller">
+                {% with seller_id=item.seller|default:item.seller_info.id %}
+                {% with perf_id=item.performance|default:item.performance_info.id|default:item.perf_id %}
+                  <span class="seller-name">
+                    Venditore:
+                    {% if seller_id %}
+                      <a class="seller-link"
+                         href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni">
+                        <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
+                      </a>
+                    {% else %}
+                      <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
+                    {% endif %}
+                  </span>
 
-                        <!-- 3 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">LIVE</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Coldplay – Music of the Spheres</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Stadio San Siro, Milano</li>
-                                    <li><i class="far fa-calendar"></i> Gio 5 Set, 20:45</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">72</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">540</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">210</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 4 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">TEATRO</span>
-                            <div class="movie-img">
-                               <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">La Traviata – Teatro alla Scala</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Teatro alla Scala, Milano</li>
-                                    <li><i class="far fa-calendar"></i> Ven 8 Nov, 20:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">46</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">190</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">65</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 5 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">SPORT</span>
-                            <div class="movie-img">
-                              <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">NBA European Tour – Milano</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> Mediolanum Forum,  (MI)</li>
-                                    <li><i class="far fa-calendar"></i> Mar 18 Nov, 19:30</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">120</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">410</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">88</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 6 -->
-                        <div class="movie-item">
-                            <span class="movie-quality">SHOW</span>
-                            <div class="movie-img">
-                                <img src="{% static 'assets/img/movie/stock.png' %}" alt="Marco Mengoni">
-                                <a href="evento.html" class="movie-play"><i class="icon-play-3"></i></a>
-                            </div>
-                            <div class="movie-content">
-                                <h6 class="movie-title"><a href="evento-singolo.html">Cirque du Soleil – OVO</a></h6>
-                                <ul class="event-meta">
-                                    <li><i class="far fa-location-dot"></i> PalaEur, Roma</li>
-                                    <li><i class="far fa-calendar"></i> Dom 1 Dic, 18:00</li>
-                                </ul>
-                                <div class="event-stats" style="display: none">
-                                    <div class="event-stat">
-                                        <span class="num">98</span>
-                                        <span class="stat-icon" role="img" aria-label="Disponibili" title="Disponibili"><i class="fas fa-ticket-alt"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">260</span>
-                                        <span class="stat-icon" role="img" aria-label="Venduti" title="Venduti"><i class="fas fa-shopping-bag"></i></span>
-                                    </div>
-                                    <div class="event-stat">
-                                        <span class="num">120</span>
-                                        <span class="stat-icon" role="img" aria-label="Preferiti" title="Preferiti"><i class="far fa-heart"></i></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div><!-- /.movie-slider -->
-                </div>
+                  {% if item.seller_rating_avg %}
+                    {% if seller_id %}
+                      <a class="stars-link"
+                         href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni"
+                         title="Vedi recensioni">
+                        <span class="stars" aria-label="Valutazione {{ item.seller_rating_avg }} su 5">
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                          <i class="fas fa-star-half-alt"></i>
+                          <span class="rating-num">{{ item.seller_rating_avg }}</span>
+                          {% if item.seller_reviews_count %}
+                            <span class="rating-count">({{ item.seller_reviews_count }})</span>
+                          {% endif %}
+                        </span>
+                      </a>
+                    {% else %}
+                      <span class="stars" aria-label="Valutazione {{ item.seller_rating_avg }} su 5">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                        <span class="rating-num">{{ item.seller_rating_avg }}</span>
+                        {% if item.seller_reviews_count %}
+                          <span class="rating-count">({{ item.seller_reviews_count }})</span>
+                        {% endif %}
+                      </span>
+                    {% endif %}
+                  {% endif %}
+                {% endwith %}
+                {% endwith %}
+              </div>
             </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+    </div>
+  </div>
+  <!-- /TOP VENDITORE -->
 
+  <!-- EVENTI DEL MESE -->
+  <div class="movie-area pt-70">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <div class="site-heading-inline">
+            <h2 class="site-title">Eventi del Mese</h2>
+            <a href="{% url 'events_index' %}" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
+          </div>
+        </div>
+      </div>
 
-            <div class="cta-area pb-90 pt-70">
-                <div class="container">
-                    <div class="cta-wrapper">
-                        <div class="row align-items-center">
-                            <div class="col-lg-7 mx-auto">
-                                <div class="cta-content text-center">
-                                    <h1>Biglietti non disponibili? Ti avvisiamo noi.</h1>
-                                    <p>Abbonati a Tixy e ricevi una notifica immediata quando tornano disponibili o scendono di prezzo per l’evento che cerchi.</p>
-                                    <a href="abbonati.html" class="theme-btn">
-                                        <i class="far fa-bell"></i> Attiva gli alert
-                                    </a>
-                                    <!-- opzionale: nota piccola
-                                    <small class="d-block mt-2">Disdici quando vuoi · Nessuno spam</small>
-                                    -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      {% if month_items %}
+      <div class="movie-slider owl-carousel owl-theme">
+        {% for item in month_items %}
+        <div class="movie-item">
+          <span class="movie-quality">LIVE</span>
+          <div class="movie-img">
+            <img src="{% static 'assets/img/movie/stock.png' %}" alt="{{ item.perf_name }}">
+            <a href="{% url 'event-listings' item.perf_id %}" class="movie-play"><i class="icon-play-3"></i></a>
+          </div>
+          <div class="movie-content">
+            <h6 class="movie-title"><a href="{% url 'event-listings' item.perf_id %}">{{ item.perf_name }}</a></h6>
+            <ul class="event-meta">
+              <li><i class="far fa-location-dot"></i> {{ item.venue }}</li>
+              <li><i class="far fa-calendar"></i> {{ item.starts_fmt }}</li>
+            </ul>
+            <div class="event-stats" style="display:none"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="text-muted">Nessun evento per il mese corrente.</p>
+      {% endif %}
+    </div>
+  </div>
+  <!-- /EVENTI DEL MESE -->
+
+  <!-- ULTIMI EVENTI -->
+  <div class="movie-area pt-70">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <div class="site-heading-inline">
+            <h2 class="site-title">Ultimi Eventi</h2>
+            <a href="{% url 'events_index' %}" class="theme-btn">View All<i class="far fa-angles-right"></i></a>
+          </div>
+        </div>
+      </div>
+
+      {% if latest_items %}
+      <div class="movie-slider owl-carousel owl-theme">
+        {% for item in latest_items %}
+        <div class="movie-item">
+          <span class="movie-quality">LIVE</span>
+          <div class="movie-img">
+            <img src="{% static 'assets/img/movie/stock.png' %}" alt="{{ item.perf_name }}">
+            {% if item.perf_id %}
+              <a href="{% url 'event-listings' item.perf_id %}" class="movie-play" aria-label="Apri dettagli"><i class="icon-play-3"></i></a>
+            {% else %}
+              <a href="#" class="movie-play" aria-label="Dettagli non disponibili"><i class="icon-play-3"></i></a>
+            {% endif %}
+          </div>
+          <div class="movie-content">
+            <h6 class="movie-title">
+              {% if item.perf_id %}
+                <a href="{% url 'event-listings' item.perf_id %}">{{ item.perf_name }}</a>
+              {% else %}
+                {{ item.perf_name }}
+              {% endif %}
+            </h6>
+            <ul class="event-meta">
+              <li><i class="far fa-location-dot"></i> {{ item.venue }}</li>
+              <li><i class="far fa-calendar"></i> {{ item.starts_fmt }}</li>
+            </ul>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="text-muted">Nessun evento imminente.</p>
+      {% endif %}
+    </div>
+  </div>
+  <!-- /ULTIMI EVENTI -->
+
+  <!-- CTA -->
+  <div class="cta-area pb-90 pt-70">
+    <div class="container">
+      <div class="cta-wrapper">
+        <div class="row align-items-center">
+          <div class="col-lg-7 mx-auto">
+            <div class="cta-content text-center">
+              <h1>Biglietti non disponibili? Ti avvisiamo noi.</h1>
+              <p>Abbonati a Tixy e ricevi una notifica immediata quando tornano disponibili o scendono di prezzo.</p>
+              <a href="{% url 'attiva_pro' %}" class="theme-btn">
+                <i class="far fa-bell"></i> Attiva gli alert
+              </a>
+              {# <small class="d-block mt-2">Disdici quando vuoi · Nessuno spam</small> #}
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /CTA -->
 
-
-
-        </main>
+</main>
 {% endblock %}

@@ -1,0 +1,174 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Tixy — Seleziona biglietti{% endblock %}
+{% block body_class %}account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Seleziona biglietti</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Upload #{{ upload_id }}</p>
+    </div>
+    <div>
+      <a href="{% url 'account_resales' %}" class="btn btn-outline-light btn-sm"><i class="far fa-arrow-left me-1"></i> Torna alla rivendita</a>
+    </div>
+  </div>
+</section>
+
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+      <div class="col-lg-10 mx-auto">
+        <div class="card card-ghost mb-3">
+          <div class="card-header">
+            <h4 class="m-0">Riepilogo caricamento</h4>
+            <small class="text-muted">Controlla i singoli biglietti rilevati e seleziona quelli da mettere in vendita.</small>
+          </div>
+          <div class="card-body">
+            {% if not subitems %}
+              <div class="p-3 text-center text-muted">
+                Analisi in corso… <a href="" onclick="location.reload(); return false;">Aggiorna</a>
+              </div>
+            {% else %}
+              <form method="post" class="row g-3">
+                {% csrf_token %}
+
+                <div class="col-12">
+                  <div class="table-responsive">
+                    <table class="table table-admin align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th style="width:36px">
+                            <input type="checkbox" id="chk-all">
+                          </th>
+                          <th>Intestatario</th>
+                          <th class="text-nowrap">QR/Sigillo</th>
+                          <th class="text-nowrap">Posto</th>
+                          <th class="text-nowrap">Pagina</th>
+                          <th>Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for s in subitems %}
+                          <tr>
+                            <td><input type="checkbox" name="subitem_ids" value="{{ s.id }}"></td>
+                            <td>
+                              <div class="fw-semibold">{{ s.nome|default:"—" }} {{ s.cognome|default:"" }}</div>
+                              {% if s.email %}<div class="small text-muted">{{ s.email }}</div>{% endif %}
+                            </td>
+                            <td class="text-nowrap">
+                              <div class="small">{{ s.code_type|default:"CODE" }}</div>
+                              <div class="text-muted small">{{ s.code_value|default:"—" }}</div>
+                            </td>
+                            <td class="text-nowrap">
+                              {{ s.settore|default:"" }} {% if s.fila %}- Fila {{ s.fila }}{% endif %}{% if s.posto %} / Posto {{ s.posto }}{% endif %}
+                            </td>
+                            <td class="text-nowrap">{{ s.page|default:"—" }}</td>
+                            <td class="small text-muted">{{ s.note|default:"" }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="small text-muted mt-2">Seleziona i biglietti da includere nell’annuncio.</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Prezzo per biglietto</label>
+                  <div class="input-group">
+                    <span class="input-group-text">€</span>
+                    <input type="number" name="price_each" class="form-control" step="0.01" min="0" required>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Valuta</label>
+                  <select name="currency" class="form-select">
+                    <option value="EUR" selected>EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                  </select>
+                </div>
+
+                <div class="col-md-5">
+                  <label class="form-label">Metodo consegna</label>
+                  <select name="delivery_method" class="form-select">
+                    <option value="PDF" selected>PDF</option>
+                    <option value="APP">App/Wallet</option>
+                    <option value="CAMBIO_NOMINATIVO">Cambio nominativo</option>
+                  </select>
+                  <small class="text-muted">Scegli come verrà consegnato il biglietto all’acquirente.</small>
+                </div>
+
+                <div class="col-md-7">
+                  <label class="form-label">Performance</label>
+                  <select name="performance" class="form-select" required>
+                    <option value="">Seleziona…</option>
+                    {% for p in perf_options %}
+                      <option value="{{ p.id }}">{{ p.title }}</option>
+                    {% endfor %}
+                  </select>
+                  <small class="text-muted">Obbligatoria per creare l’annuncio.</small>
+                </div>
+
+                <div class="col-md-5 d-flex align-items-end">
+                  <label class="form-check ms-md-3 mb-0">
+                    <input type="checkbox" name="change_name_required" class="form-check-input">
+                    <span class="form-check-label">Richiede cambio nominativo</span>
+                  </label>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Note (opzionale)</label>
+                  <textarea name="notes" rows="2" class="form-control" placeholder="Es. tempi di consegna, dettagli posto, ecc."></textarea>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                  <button type="submit" class="theme-btn"><i class="far fa-tags me-1"></i> Crea annuncio</button>
+                  <a href="{% url 'account_resales' %}" class="btn btn-light">Annulla</a>
+                </div>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if biglietto %}
+        <div class="card card-ghost">
+          <div class="card-header"><h5 class="m-0">Dati biglietto (estratti)</h5></div>
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-md-6"><strong>Intestatario:</strong> {{ biglietto.nome|default:"" }} {{ biglietto.cognome|default:"" }}</div>
+              <div class="col-md-6"><strong>Email:</strong> {{ biglietto.email|default:"—" }}</div>
+              <div class="col-md-6"><strong>Piattaforma:</strong> {{ biglietto.piattaforma|default:"—" }}</div>
+              <div class="col-md-6"><strong>Rilevati:</strong> {{ subitems|length|default:0 }} biglietti</div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll){
+    chkAll.addEventListener('change', () => {
+      document.querySelectorAll('input[name="subitem_ids"]').forEach(cb => cb.checked = chkAll.checked);
+    });
+  }
+})();
+</script>
+{% endblock %}

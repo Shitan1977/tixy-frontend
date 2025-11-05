@@ -1,0 +1,217 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}I miei biglietti | Tixy{% endblock %}
+{% block body_class %}account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<section class="account-hero account-hero--sm account-hero--overlay"
+         style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <h1 class="m-0 account-hero__title">Area Riservata</h1>
+      <p class="subtitle m-0 account-hero__subtitle">I miei biglietti</p>
+    </div>
+  </div>
+</section>
+
+<section class="account-wrap">
+  <div class="container">
+    <div class="row g-3">
+
+      <!-- Sidebar -->
+      <aside class="col-lg-3">
+        <div class="account-sidebar">
+          <div class="box-head">
+            <h5 class="m-0">Menu Account</h5>
+            <small class="text-muted">Mister Alert</small>
+          </div>
+          <nav class="nav-account" aria-label="Menu account">
+            <a class="nav-item" href="{% url 'account_admin' %}" data-route="dashboard">
+              <i class="far fa-gauge-high"></i> Dashboard
+            </a>
+            <a class="nav-item" href="{% url 'account_alerts' %}" data-route="alert">
+              <i class="far fa-bell"></i> I miei Alert
+            </a>
+            <a class="nav-item" href="{% url 'account_subscriptions' %}" data-route="abbonamenti">
+              <i class="far fa-crown"></i> Abbonamenti
+            </a>
+            <a class="nav-item active" href="{% url 'account_tickets' %}" data-route="acquisti">
+              <i class="far fa-bag-shopping"></i> Acquisti
+            </a>
+            <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita">
+              <i class="far fa-tags"></i> Rivendita
+            </a>
+            <a class="nav-item" href="{% url 'account_support_list' %}" data-route="assistenza">
+              <i class="far fa-life-ring"></i> Assistenza
+            </a>
+            <a class="nav-item" href="{% url 'account_profile' %}" data-route="profilo">
+              <i class="far fa-user-shield"></i> Profilo &amp; Sicurezza
+            </a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <div class="col-lg-9">
+
+        <!-- Tabs Attivi / Storico -->
+        <div class="card card-ghost mb-3">
+          <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+              <h4 class="m-0">I miei biglietti</h4>
+              <small class="text-muted">
+                {% if show_past %}Storico acquisti (eventi trascorsi){% else %}Solo eventi futuri / non scaduti{% endif %}
+              </small>
+            </div>
+
+            <div class="btn-group" role="group" aria-label="Filtro biglietti">
+              <a href="{% url 'account_tickets' %}"
+                 class="btn btn-sm {% if not show_past %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="far fa-ticket me-1"></i> Attivi
+              </a>
+              <a href="{% url 'account_tickets' %}?past=1"
+                 class="btn btn-sm {% if show_past %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="far fa-clock-rotate-left me-1"></i> Storico
+              </a>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            {% if page_obj and page_obj.object_list %}
+              <div class="table-responsive">
+                <table class="table align-middle mb-0 table-admin">
+                  <thead>
+                    <tr>
+                      <th>Evento</th>
+                      <th class="d-none d-md-table-cell">Luogo</th>
+                      <th class="text-nowrap">Data concerto</th>
+                      <th class="d-none d-lg-table-cell text-nowrap">Ordine</th>
+                      <th class="d-none d-lg-table-cell text-nowrap text-end">Totale</th>
+                      <th class="text-end">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for t in page_obj.object_list %}
+                      <tr>
+                        <td>
+                          <div class="fw-semibold">{{ t.perf_title|default:"Evento" }}</div>
+                          {% if t.seat_label %}
+                            <div class="small text-muted">{{ t.seat_label }}</div>
+                          {% endif %}
+                          {% if t.qty %}
+                            <div class="small text-muted">Quantità: {{ t.qty }}</div>
+                          {% endif %}
+                          {% if t.is_expired %}
+                            <span class="badge badge-soft danger mt-1">Scaduto</span>
+                          {% endif %}
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                          <span class="text-muted">{{ t.venue|default_if_none:"" }}</span>
+                        </td>
+
+                        <td class="text-nowrap">
+                          {{ t.event_date_fmt|default:"—" }}
+                        </td>
+
+                        <td class="d-none d-lg-table-cell text-nowrap">
+                          #{{ t.order_id }}
+                          {% if t.created_fmt %}
+                            <div class="small text-muted">Acquisto: {{ t.created_fmt }}</div>
+                          {% endif %}
+                        </td>
+
+                        <td class="d-none d-lg-table-cell text-end">
+                          {% if t.total %}
+                            € {{ t.total }}
+                          {% else %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
+                        </td>
+
+                        <td class="text-end">
+                          {% if t.download_url %}
+                            <a href="{{ t.download_url }}" class="btn btn-sm btn-primary">
+                              <i class="far fa-download me-1"></i> Download
+                            </a>
+                          {% else %}
+                            <a href="{% url 'ticket_download_proxy' t.order_id %}" class="btn btn-sm btn-primary">
+                              <i class="far fa-download me-1"></i> Download
+                            </a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Paginazione -->
+              {% if page_obj.paginator.num_pages > 1 %}
+              <div class="p-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                  Pagina {{ page_obj.number }} di {{ page_obj.paginator.num_pages }}
+                </div>
+                <div class="btn-group">
+                  {% if page_obj.has_previous %}
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="?page={{ page_obj.previous_page_number }}{% if show_past %}&past=1{% endif %}">
+                      ‹ Precedente
+                    </a>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" disabled>‹ Precedente</button>
+                  {% endif %}
+
+                  {% if page_obj.has_next %}
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="?page={{ page_obj.next_page_number }}{% if show_past %}&past=1{% endif %}">
+                      Successiva ›
+                    </a>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Successiva ›</button>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+            {% else %}
+              <div class="p-4">
+                {% if show_past %}
+                  <div class="text-muted">
+                    Nessun biglietto nello storico.
+                  </div>
+                {% else %}
+                  <div class="text-muted">
+                    Non ci sono biglietti attivi. Vai alla
+                    <a href="{% url 'home' %}">home</a> e trova il tuo prossimo concerto!
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div><!-- /col-lg-9 -->
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // evidenzia voce "Acquisti" nel menu laterale
+    const path = (location.pathname || '/').replace(/\/+$/,'').toLowerCase();
+    const key = path.includes('/account/tickets') ? 'acquisti' : 'dashboard';
+    document.querySelectorAll('.nav-account a')
+      .forEach(a => a.classList.toggle('active', a.dataset.route === key));
+  })();
+</script>
+{% endblock %}
