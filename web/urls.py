@@ -70,4 +70,9 @@ urlpatterns = [
 
     # Account: Abbonamenti (read-only)
     path("account/abbonamenti/", views.account_subscriptions_view, name="account_subscriptions"),
+
+    path("evento/perf/<int:perf_id>/date/", views.event_dates_from_perf, name="event_dates_from_perf"),
+    path("evento/<int:event_id>/date/", views.event_dates, name="event_dates"),
+    path("evento/<int:perf_id>/", views.event_listings, name="event_listings"),
+
 ]

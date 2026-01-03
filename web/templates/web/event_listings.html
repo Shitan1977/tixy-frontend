@@ -32,13 +32,36 @@
     <div class="container">
       <div class="seller-card" style="padding:22px;">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+
           <div>
             <h3 class="seller-title mb-1">
               {{ perf.evento_nome|default:"Evento" }}
             </h3>
+
             <div class="small text-muted">
               {{ perf.luogo_nome|default:"Luogo" }}
               {% if perf_when %} • {{ perf_when }}{% endif %}
+            </div>
+
+            {# CTA / info #}
+            <div class="mt-3">
+              {% if has_tixy %}
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <span class="badge rounded-pill bg-success-subtle text-success"
+                        style="padding:10px 14px; border:1px solid rgba(0,0,0,.08);">
+                    <i class="far fa-circle-check"></i> Biglietti disponibili
+                  </span>
+
+                  <a href="#tixy-listings" class="small text-decoration-none" style="opacity:.85;">
+                    Vai ai biglietti <i class="far fa-arrow-down"></i>
+                  </a>
+                </div>
+              {% else %}
+                <button type="button" class="theme-btn theme-btn-sm" disabled
+                        style="opacity:.55; cursor:not-allowed;">
+                  <i class="far fa-ticket"></i> Biglietti non disponibili
+                </button>
+              {% endif %}
             </div>
           </div>
 
@@ -55,122 +78,196 @@
               <div class="small price-break">fino a € {{ perf.prezzo_max|floatformat:2 }}</div>
             {% endif %}
           </div>
+
         </div>
       </div>
     </div>
   </section>
 
   {% if has_tixy %}
-  <section class="py-20">
-    <div class="container">
-      <div class="site-heading-inline mb-3">
-        <h4 class="site-title">Biglietti su Tixy</h4>
-      </div>
+    <!-- LISTA BIGLIETTI -->
+    <section class="py-20 pb-40" id="tixy-listings">
+      <div class="container">
+        <div class="site-heading-inline mb-3">
+          <h4 class="site-title">Biglietti su Tixy</h4>
+        </div>
 
-      {% with items=listings %}
-      <div class="row g-3">
-        {% for l in items %}
-        <div class="col-12">
-          <article class="seller-card">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-              <div>
-                <div class="mb-1">
-                  {% if l.seller_info %}
-                    <strong class="seller-title">
-                      {{ l.seller_info.first_name|default_if_none:"" }}
-                      {{ l.seller_info.last_name|default_if_none:"Venditore" }}
-                    </strong>
+        {% with items=listings %}
+        <div class="row g-3">
+          {% for l in items %}
+          <div class="col-12">
+            <article class="seller-card">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="mb-1">
+                    {% if l.seller_info %}
+                      <strong class="seller-title">
+                        {{ l.seller_info.first_name|default_if_none:"" }}
+                        {{ l.seller_info.last_name|default_if_none:"Venditore" }}
+                      </strong>
 
-                    {# === NUOVO: badge verifica accanto al nome venditore === #}
-                    {% if l.seller_info.socials_verified %}
-                      <span class="badge rounded-pill bg-success-subtle text-success ms-2">
-                        <i class="far fa-circle-check"></i> Social verificati
-                      </span>
+                      {% if l.seller_info.socials_verified %}
+                        <span class="badge rounded-pill bg-success-subtle text-success ms-2">
+                          <i class="far fa-circle-check"></i> Social verificati
+                        </span>
+                      {% endif %}
+                      {% if l.seller_info.phone_verified %}
+                        <span class="badge rounded-pill bg-success-subtle text-success ms-1">
+                          <i class="far fa-phone"></i> Telefono verificato
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      <strong class="seller-title">Venditore #{{ l.seller }}</strong>
                     {% endif %}
-                    {% if l.seller_info.phone_verified %}
-                      <span class="badge rounded-pill bg-success-subtle text-success ms-1">
-                        <i class="far fa-phone"></i> Telefono verificato
-                      </span>
-                    {% endif %}
-                    {# === FINE NUOVO === #}
+                  </div>
 
-                  {% else %}
-                    <strong class="seller-title">Venditore #{{ l.seller }}</strong>
-                  {% endif %}
+                  <div class="small seller-sub">
+                    {% if l.seller_rating_avg %}
+                      <i class="far fa-star"></i> {{ l.seller_rating_avg|floatformat:2 }}
+                    {% else %}
+                      <i class="far fa-star-half"></i> n.d.
+                    {% endif %}
+                    {% if l.seller_reviews_count %} • {{ l.seller_reviews_count }} recensioni{% endif %}
+                  </div>
                 </div>
 
-                <div class="small seller-sub">
-                  {% if l.seller_rating_avg %}
-                    <i class="far fa-star"></i> {{ l.seller_rating_avg|floatformat:2 }}
-                  {% else %}
-                    <i class="far fa-star-half"></i> n.d.
+                <div class="price-wrap text-end">
+                  <small class="d-block">Totale</small>
+                  <div class="price-amount">
+                    {% if l.total_price %}
+                      € {{ l.total_price|floatformat:2 }} {{ l.currency|default:"EUR" }}
+                    {% else %}—{% endif %}
+                  </div>
+                  {% if l.price_each %}
+                    <div class="small price-break">(€ {{ l.price_each|floatformat:2 }} cad.)</div>
                   {% endif %}
-                  {% if l.seller_reviews_count %} • {{ l.seller_reviews_count }} recensioni{% endif %}
                 </div>
               </div>
 
-              <div class="price-wrap text-end">
-                <small class="d-block">Totale</small>
-                <div class="price-amount">
-                  {% if l.total_price %}
-                    € {{ l.total_price|floatformat:2 }} {{ l.currency|default:"EUR" }}
-                  {% else %}—{% endif %}
-                </div>
-                {% if l.price_each %}
-                  <div class="small price-break">(€ {{ l.price_each|floatformat:2 }} cad.)</div>
+              <ul class="seller-tags mt-2">
+                {% if l.seat_category %}
+                  <li class="chip"><i class="far fa-layer-group"></i> {{ l.seat_category }}</li>
                 {% endif %}
+                {% if l.section %}
+                  <li class="chip"><i class="far fa-grid-2"></i> Settore {{ l.section }}</li>
+                {% endif %}
+                {% if l.row %}
+                  <li class="chip"><i class="far fa-chair"></i> Fila {{ l.row }}</li>
+                {% endif %}
+
+                {% if l.seat_from or l.seat_to %}
+                  <li class="chip">
+                    <i class="far fa-ticket"></i>
+                    Posti {% if l.seat_from %}{{ l.seat_from }}{% endif %}{% if l.seat_to %}-{{ l.seat_to }}{% endif %}
+                  </li>
+                {% endif %}
+
+                <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: {{ l.qty|default:1 }}</li>
+
+                {% if l.delivery_method %}
+                  <li class="chip"><i class="far fa-truck-fast"></i> {{ l.delivery_method }}</li>
+                {% endif %}
+
+                {% if l.expires_at %}
+                  <li class="chip"><i class="far fa-hourglass-half"></i> scade {{ l.expires_at_fmt }}</li>
+                {% endif %}
+              </ul>
+
+              <div class="text-end mt-3">
+                <a href="{% url 'acquista' l.id %}" class="theme-btn theme-btn-sm">
+                  <i class="far fa-cart-shopping"></i> Acquista
+                </a>
               </div>
-            </div>
-
-            <ul class="seller-tags mt-2">
-              {% if l.seat_category %}
-                <li class="chip"><i class="far fa-layer-group"></i> {{ l.seat_category }}</li>
-              {% endif %}
-              {% if l.section %}
-                <li class="chip"><i class="far fa-grid-2"></i> Settore {{ l.section }}</li>
-              {% endif %}
-              {% if l.row %}
-                <li class="chip"><i class="far fa-chair"></i> Fila {{ l.row }}</li>
-              {% endif %}
-
-              {% if l.seat_from or l.seat_to %}
-                <li class="chip">
-                  <i class="far fa-ticket"></i>
-                  Posti {% if l.seat_from %}{{ l.seat_from }}{% endif %}{% if l.seat_to %}-{{ l.seat_to }}{% endif %}
-                </li>
-              {% endif %}
-
-              <li class="chip"><i class="far fa-boxes-stacked"></i> Quantità: {{ l.qty|default:1 }}</li>
-
-              {% if l.delivery_method %}
-                <li class="chip"><i class="far fa-truck-fast"></i> {{ l.delivery_method }}</li>
-              {% endif %}
-
-              {% if l.expires_at %}
-                <li class="chip"><i class="far fa-hourglass-half"></i> scade {{ l.expires_at_fmt }}</li>
-              {% endif %}
-            </ul>
-
-            <div class="text-end mt-3">
-              <a href="{% url 'acquista' l.id %}" class="theme-btn theme-btn-sm">
-                <i class="far fa-cart-shopping"></i> Acquista
-              </a>
-            </div>
-          </article>
+            </article>
+          </div>
+          {% empty %}
+          <div class="col-12">
+            <div class="alert alert-info">Nessun biglietto disponibile al momento.</div>
+          </div>
+          {% endfor %}
         </div>
-        {% empty %}
-        <div class="col-12">
-          <div class="alert alert-info">Nessun biglietto disponibile al momento.</div>
-        </div>
-        {% endfor %}
+        {% endwith %}
       </div>
-      {% endwith %}
-    </div>
-  </section>
+    </section>
 
   {% else %}
+    <!-- ALERTS (GRATUITO + PRO) -->
     {% include "web/partials/event_alerts.html" with perf=perf following=following %}
   {% endif %}
+
+
+  <section class="pb-80">
+    <div class="container">
+      <div class="seller-card" style="padding:22px;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="far fa-calendar-days"></i>
+            <h5 class="m-0">Altre date</h5>
+          </div>
+          {% if dates and dates|length > 0 %}
+            <span class="small text-muted">Seleziona una data per vedere i biglietti</span>
+          {% endif %}
+        </div>
+
+        {% if dates and dates|length > 0 %}
+          <div class="row g-3 mt-2">
+            {% for d in dates %}
+              <div class="col-12 col-md-6 col-lg-4">
+                <a href="{% url 'event-listings' d.id %}"
+                   class="d-block text-decoration-none"
+                   style="color:inherit;">
+                  <div class="seller-card h-100"
+                       style="padding:16px; border:1px solid rgba(0,0,0,.08); transition:transform .12s ease;">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div>
+                        <div class="fw-semibold">
+                          <i class="far fa-calendar"></i> {{ d.starts_fmt }}
+                        </div>
+
+                        <div class="small text-muted mt-1">
+                          {% if d.venue %}{{ d.venue }}{% else %}{{ perf.luogo_nome|default:"Luogo" }}{% endif %}
+                          {% if d.city %} • {{ d.city }}{% endif %}
+                        </div>
+                      </div>
+
+                      {% if selected_date_id and d.id == selected_date_id %}
+                        <span class="badge rounded-pill bg-primary text-white"
+                              style="padding:8px 10px;">
+                          Selezionata
+                        </span>
+                      {% else %}
+                        <span class="badge rounded-pill bg-light text-dark"
+                              style="padding:8px 10px; border:1px solid rgba(0,0,0,.08);">
+                          Vedi
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <div class="mt-3 d-flex align-items-center justify-content-between">
+                      <span class="small text-muted">
+                        <i class="far fa-ticket"></i> Vai ai biglietti
+                      </span>
+
+                      {# opzionale: se esiste prezzo minimo nella data #}
+                      {% if d.prezzo_min %}
+                        <span class="small fw-semibold">
+                          da € {{ d.prezzo_min|floatformat:2 }}
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info mt-3 mb-0">
+            Nessuna data futura trovata per questo evento.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
 
 </main>
 {% endblock %}

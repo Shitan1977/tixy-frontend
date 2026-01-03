@@ -64,19 +64,14 @@ def _auth_headers(token: str | None) -> dict:
 # SEARCH / AUTOCOMPLETE
 # ---------------------------
 
-def search_performances(q: str | None = None, date: str | None = None,
-                        city: str | None = None, page: int | str | None = None,
-                        ordering: str | None = None):
-    """
-    Ricerca performance (supporta paging/ordering se presenti lato API).
-    date può essere 'gg/mm/aaaa' o 'yyyy-mm-dd'.
-    """
+def search_performances(q=None, date=None, city=None, page=None, ordering=None, page_size=None):
     params: dict = {}
     if q:         params["q"] = q
     if date:      params["date"] = date
     if city:      params["city"] = city
     if page:      params["page"] = page
     if ordering:  params["ordering"] = ordering
+    if page_size: params["page_size"] = page_size   # <-- aggiungi questo
     return _api_get("search/performances/", params=params)
 
 

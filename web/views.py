@@ -1,19 +1,24 @@
+from __future__ import annotations
+
 from math import ceil
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from calendar import monthrange
 from datetime import datetime, timedelta, timezone as dt_timezone
-from django.utils.timezone import now as dj_now
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse, quote
+
 import requests
-import urlquote
+from urllib.parse import quote
 from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.utils.timezone import now as dj_now
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 
+from .services import tixy_api
 from .services.tixy_api import (
     search_performances, get_performance, get_performance_listings, get_event,
     get_listing, listing_preview, checkout_start, checkout_summary,
@@ -23,6 +28,8 @@ from .services.tixy_api import (
     get_top_listings,
     _api_request,  # usato in varie helper/view
 )
+
+
 
 # =========================
 # Session keys (token JWT lato API)
@@ -49,34 +56,55 @@ SIMULATED_PAYMENTS = True  # quando avremo Stripe/PayPal mettiamo False
 # =========================
 # Helper comuni
 # =========================
+# =========================
+# Helper comuni
+# =========================
+
 def _fmt_iso_dmy_hm(value: str) -> str:
     if not value:
         return ""
     try:
         dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return dt.strftime("%d/%m/%Y %H:%M")
+        return dt.astimezone(dt_timezone.utc).strftime("%d/%m/%Y %H:%M")
     except Exception:
         return ""
 
 
-def _parse_iso_utc(s: str):
+def _parse_iso_z(s: str) -> datetime | None:
+    """
+    Parse "2025-12-19T21:30:00Z" -> datetime aware UTC
+    """
     if not s:
         return None
     try:
-        s = s.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=dt_timezone.utc)
-        return dt.astimezone(dt_timezone.utc)
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        return datetime.fromisoformat(s)
     except Exception:
         return None
+
+
+def _parse_iso_utc(s: str) -> datetime | None:
+    """
+    Parse ISO string -> datetime aware UTC.
+    Accetta anche "Z". Se tzinfo manca, assume UTC.
+    """
+    dt = _parse_iso_z(s)
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=dt_timezone.utc)
+    return dt.astimezone(dt_timezone.utc)
 
 
 def _safe_dt(s: str):
     if not s:
         return None
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=dt_timezone.utc)
+        return dt
     except Exception:
         return None
 
@@ -94,16 +122,16 @@ def calc_change_name_fee(starts_at_iso: str):
     Ritorna (fee: Decimal, msg: str, required: bool)
     REGOLA: €3,50 se mancano >= 24 ore all'evento; entro 24 ore = 0
     """
-    STARTS = _parse_iso_utc(starts_at_iso)
-    now = datetime.now(dt_timezone.utc)
-    if not STARTS:
+    starts = _parse_iso_utc(starts_at_iso)
+    now_utc = dj_now().astimezone(dt_timezone.utc)
+
+    if not starts:
         return Decimal("0.00"), "Cambio nominativo: data evento non disponibile.", False
 
-    diff = STARTS - now
+    diff = starts - now_utc
     if diff >= timedelta(hours=24):
         return Decimal("3.50"), "Cambio nominativo previsto (+ € 3,50) oltre le 24 ore.", True
-    else:
-        return Decimal("0.00"), "Entro 24 ore dall’evento il cambio nominativo non è richiesto.", False
+    return Decimal("0.00"), "Entro 24 ore dall’evento il cambio nominativo non è richiesto.", False
 
 
 def _append_query_and_fragment(url, extra: dict, fragment: str | None = None):
@@ -117,6 +145,51 @@ def _append_query_and_fragment(url, extra: dict, fragment: str | None = None):
     ))
 
 
+def _norm_title(s: str) -> str:
+    if not s:
+        return ""
+    s = s.lower().strip()
+    s = s.replace("“", '"').replace("”", '"')
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+def get_other_dates_fallback(perf: dict, perf_id: int, api_get):
+    """
+    1) prova endpoint /other_dates/
+    2) fallback: prende tutte le performance dello stesso luogo e stesso titolo
+    """
+    # 1) endpoint dedicato (se lato API lo avete, ma oggi sembra vuoto)
+    try:
+        data = api_get(f"/api/performances/{perf_id}/other_dates/") or []
+        if isinstance(data, dict) and "results" in data:
+            data = data["results"]
+        if isinstance(data, list) and len(data) > 0:
+            return data
+    except Exception:
+        pass
+
+    # 2) fallback per luogo + titolo
+    luogo_id = perf.get("luogo")
+    titolo = _norm_title(perf.get("evento_nome") or "")
+    if not luogo_id or not titolo:
+        return []
+
+    data = api_get(f"/api/performances/?luogo={luogo_id}&ordering=starts_at_utc&limit=200") or []
+    if isinstance(data, dict) and "results" in data:
+        data = data["results"]
+    if not isinstance(data, list):
+        return []
+
+    out = []
+    for p in data:
+        if str(p.get("id")) == str(perf_id):
+            continue
+        if _norm_title(p.get("evento_nome") or "") != titolo:
+            continue
+        out.append(p)
+
+    return out
+
 # =========================
 # Pagine semplici
 # =========================
@@ -128,84 +201,128 @@ def privacy(request):      return render(request, "web/privacy.html")
 
 
 # =========================
-# HOME con carosello “Top Venditori”
+# HOME con carosello “Top Venditori, Ultime eventi, Eventi del mese”
 # =========================
+
+
 def home(request):
-    # 1) Prendo i LISTINGS TOP senza dedupe (tutti i biglietti top)
-    raw = []
     base = settings.API_BASE_URL.rstrip("/")
 
-    # A) endpoint dedicato (se esiste)
+    # ============================================================
+    # 1) TOP LISTINGS (carosello Top Biglietti / Top Venditori)
+    # ============================================================
+    raw = []
     try:
-        resp = requests.get(f"{base}/listings/top/", params={"limit": 48}, timeout=6)
-        resp.raise_for_status()
-        data = resp.json() or []
-        raw = data.get("results") if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        data = _api_request("GET", "listings/", params={"limit": 48, "is_top": "true"})
+        raw = data.get("results", data if isinstance(data, list) else []) or []
     except Exception:
         raw = []
 
-    # B) fallback: filtro server-side standard
-    if not raw:
-        try:
-            resp = requests.get(f"{base}/listings/", params={"limit": 48, "is_top": "true"}, timeout=6)
-            resp.raise_for_status()
-            data = resp.json() or []
-            raw = data.get("results") if isinstance(data, dict) else (data if isinstance(data, list) else [])
-        except Exception:
-            raw = []
+    # fallback FE: se il backend ignora is_top, filtro localmente
+    def _is_top(it):
+        it = it or {}
+        return bool(
+            it.get("is_top")
+            or it.get("top")
+            or (str(it.get("badge") or "").lower() == "top")
+            or ("tags" in it and "top" in [str(t).lower() for t in (it.get("tags") or [])])
+        )
 
-    # C) fallback FE: se nessuno dei due filtri esiste, tengo solo quelli marcati "top"
     if raw and isinstance(raw, list):
-        def _is_top(it):
-            it = it or {}
-            return bool(
-                it.get("is_top")
-                or it.get("top")
-                or (str(it.get("badge") or "").lower() == "top")
-                or ("tags" in it and "top" in [str(t).lower() for t in (it.get("tags") or [])])
-            )
         raw = [it for it in raw if _is_top(it)]
 
-    # 2) normalizzazione per i template
-    norm = []
+    # normalizzazione per template (TOP)
+    top_listings = []
     for it in raw:
         if not isinstance(it, dict):
             continue
         p = (it.get("performance_info") or {})
         s = (it.get("seller_info") or {})
         iso = p.get("starts_at_utc") or ""
-        norm.append({
+        top_listings.append({
             **it,
             "perf_id": p.get("id"),
             "perf_name": p.get("evento_nome") or "",
             "venue": p.get("luogo_nome") or "",
             "starts_iso": iso,
             "starts_fmt": _fmt_iso_dmy_hm(iso),
-            "seller_name": (f"{(s.get('first_name') or '').strip()} {(s.get('last_name') or '').strip()}".strip()
-                            or f"Venditore #{it.get('seller')}"),
+            "seller_name": (
+                f"{(s.get('first_name') or '').strip()} {(s.get('last_name') or '').strip()}".strip()
+                or f"Venditore #{it.get('seller')}"
+            ),
         })
 
-    # 3) Eventi del mese (UTC)
+    # ============================================================
+    # 2) PERFORMANCE LIST "globale" (serve per mese + ultimi eventi)
+    #    (API non filtra, quindi prendiamo "molti" e filtriamo qui)
+    # ============================================================
+    perf_rows = []
+    try:
+        # prendiamo tanti risultati ordinati per data
+        data = tixy_api.search_performances(ordering="starts_at_utc") or {}
+        # se il backend pagina, prendiamo la prima pagina "grossa"
+        # NB: se supporta limit, la passiamo via _api_get diretto:
+        data = tixy_api._api_get("search/performances/", params={"ordering": "starts_at_utc", "limit": 200}) or data
+        perf_rows = data.get("results", data if isinstance(data, list) else []) or []
+    except Exception:
+        perf_rows = []
+
+    # normalizzazione performances
+    performances = []
+    for p in perf_rows:
+        if not isinstance(p, dict):
+            continue
+        iso = p.get("starts_at_utc") or ""
+        dt = _parse_iso_z(iso)
+
+        performances.append({
+            "perf_id": p.get("id"),
+            "event_id": p.get("evento") or p.get("event") or p.get("evento_id"),
+            "perf_name": p.get("evento_nome") or "",
+            "venue": p.get("luogo_nome") or "",
+            "starts_iso": iso,
+            "starts_dt": dt,
+            "starts_fmt": _fmt_iso_dmy_hm(iso),
+            "raw": p,
+        })
+
     now = datetime.now(dt_timezone.utc)
-    ym_prefix = f"{now.year:04d}-{now.month:02d}"
-    month_items = [x for x in norm if (x.get("starts_iso") or "").startswith(ym_prefix)]
+
+    # ============================================================
+    # 3) EVENTI DEL MESE (mese corrente UTC) -> max 12
+    # ============================================================
+    start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_day = monthrange(now.year, now.month)[1]
+    end_month = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
+
+    month_items = [
+        x for x in performances
+        if x["starts_dt"] and start_month <= x["starts_dt"] <= end_month
+    ][:12]
+
+    # fallback: se non ci sono eventi nel mese -> prossimi 12 FUTURI
     if not month_items:
-        month_items = [x for x in norm if x.get("starts_iso")][:12]
+        month_items = [
+            x for x in performances
+            if x["starts_dt"] and x["starts_dt"] >= now
+        ][:12]
 
-    # 4) Ultimi eventi (prossimi per data, asc), max 12
-    latest_items = sorted(
-        (x for x in norm if x.get("starts_iso")),
-        key=lambda i: i["starts_iso"]
-    )[:12]
-
-    # 5) “Top biglietti”
-    top_items = norm
+    # ============================================================
+    # 4) ULTIMI EVENTI (in realtà "prossimi eventi" futuri) -> max 12
+    #    NON dipendono dai biglietti top.
+    # ============================================================
+    latest_items = [
+        x for x in performances
+        if x["starts_dt"] and x["starts_dt"] >= now
+    ][:12]
 
     return render(request, "web/home.html", {
-        "top_listings": top_items,
+        "top_listings": top_listings,
         "month_items": month_items,
-        "latest_items": latest_items
+        "latest_items": latest_items,
     })
+
+
 
 
 # =========================
@@ -239,22 +356,157 @@ def search(request):
 # =========================
 # Dettaglio performance + listings
 # =========================
+
+
+import re
+from datetime import datetime, timezone as dt_timezone
+
+def get_other_dates_by_title(perf: dict, perf_id: int):
+    titolo_raw = (perf.get("evento_nome")
+                  or (perf.get("performance_info") or {}).get("evento_nome")
+                  or perf.get("title")
+                  or "")
+    titolo = _norm_title(titolo_raw)
+    if not titolo:
+        return []
+
+    city_ref = (perf.get("citta") or perf.get("city") or "").strip().lower()
+    now_utc = datetime.now(dt_timezone.utc)
+
+    def _fetch(params):
+        try:
+            data = _api_request("GET", "search/performances/", params=params) or {}
+        except Exception:
+            return []
+        return (data.get("results", data if isinstance(data, list) else []) or [])
+
+    # 🔥 tentativo 1: q (come stavi facendo)
+    rows = _fetch({"q": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
+
+    # 🔥 tentativo 2: molte API Django Filter/Search usano "search"
+    if not rows:
+        rows = _fetch({"search": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
+
+    # 🔥 tentativo 3: alcune usano "query"
+    if not rows:
+        rows = _fetch({"query": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
+
+    out = []
+    for p in rows:
+        if not isinstance(p, dict):
+            continue
+
+        pp = p.get("performance_info") or p  # fallback
+        pid = pp.get("id") or p.get("id")
+        if not pid or str(pid) == str(perf_id):
+            continue
+
+        # titolo da pp oppure p
+        t_raw = (pp.get("evento_nome") or p.get("evento_nome") or pp.get("title") or p.get("title") or "")
+        if _norm_title(t_raw) != titolo:
+            continue
+
+        # date da pp oppure p
+        iso = (pp.get("starts_at_utc") or p.get("starts_at_utc") or
+               pp.get("starts_at") or p.get("starts_at") or "")
+        if not iso:
+            continue
+
+        # solo future (ma NON scartare se parsing fallisce: meglio tenerla che "sparire")
+        dt_ok = True
+        try:
+            dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=dt_timezone.utc)
+            if dt < now_utc:
+                dt_ok = False
+        except Exception:
+            # NON scartiamo: se l'API manda un formato strano, almeno la vediamo
+            dt_ok = True
+
+        if not dt_ok:
+            continue
+
+        # filtro soft città SOLO se entrambe presenti
+        city = (pp.get("citta") or p.get("citta") or pp.get("city") or p.get("city") or "").strip().lower()
+        if city_ref and city and city != city_ref:
+            continue
+
+        out.append(pp)
+
+    out.sort(key=lambda x: x.get("starts_at_utc") or x.get("starts_at") or "")
+    return out
+
+
+
+
 def event_listings(request, perf_id: int):
     perf, listings, external_platforms, error = None, [], [], None
     already_following = False
     has_external = False
 
+    dates = []
+    perf_when = ""
+    event_id = None
+
     try:
         # 1) Dettaglio performance
-        perf = get_performance(perf_id)
+        perf = get_performance(perf_id) or {}
 
-        # 2) Listings Tixy per la performance
+        # 2) Data evento formattata
+        starts_iso = (perf.get("starts_at_utc") or perf.get("starts_at") or "")
+        perf_when = _fmt_iso_dmy_hm(starts_iso)
+
+        # 3) ALTRE DATE (stesso titolo)
+        raw_dates = get_other_dates_by_title(perf, perf_id)
+
+        now_utc = datetime.now(dt_timezone.utc)
+        norm = []
+
+        for d in (raw_dates or []):
+            pid = d.get("id")
+            iso = d.get("starts_at_utc") or d.get("starts_at") or ""
+            if not pid or not iso:
+                continue
+
+            try:
+                dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=dt_timezone.utc)
+                if dt < now_utc:
+                    continue
+            except Exception:
+                continue
+
+            norm.append({
+                "id": int(pid),
+                "starts_iso": iso,
+                "starts_fmt": _fmt_iso_dmy_hm(iso),
+                "city": (d.get("citta") or d.get("city") or "").strip() or None,
+                "venue": (d.get("luogo_nome") or d.get("venue") or "").strip() or None,
+                "prezzo_min": d.get("prezzo_min"),
+            })
+        import sys
+        sys.stderr.write(f"DEBUG altre-date by-title found={len(dates)} ids={[d['id'] for d in dates]}\n")
+        sys.stderr.flush()
+
+        norm.sort(key=lambda x: x["starts_iso"] or "")
+        dates = norm
+
+        # 4) event_id (serve per follow, esterne, ecc.)
+        event_id = (
+            perf.get("evento") or perf.get("event") or perf.get("evento_id")
+            or (perf.get("performance_info") or {}).get("evento")
+            or (perf.get("performance_info") or {}).get("event")
+            or (perf.get("performance_info") or {}).get("evento_id")
+        )
+
+        # 5) Listings Tixy per la performance
         data_listings = get_performance_listings(perf_id)
         listings = data_listings.get("results", data_listings if isinstance(data_listings, list) else [])
 
-        # 3) (opzionale) piattaforme esterne
+        # 6) (opzionale) piattaforme esterne
         if getattr(settings, "SHOW_EXTERNAL_PLATFORMS", False) and isinstance(perf, dict):
-            event_id = perf.get("evento")
             if event_id:
                 ev = get_event(event_id)
                 maps = ev.get("mappings_evento", [])
@@ -266,11 +518,11 @@ def event_listings(request, perf_id: int):
                         external_platforms.append({"name": name, "url": url, "note": None})
             has_external = bool(external_platforms)
 
-        # 4) Se loggato: controlla se segue già l’evento
+        # 7) Se loggato: controlla se segue già l’evento
         try:
             token = request.session.get(SESSION_TOKEN_KEY)
-            if token and isinstance(perf, dict) and perf.get("evento"):
-                already_following = api_event_follow_status(token, perf["evento"])
+            if token and event_id:
+                already_following = api_event_follow_status(token, int(event_id))
         except Exception:
             already_following = False
 
@@ -285,6 +537,10 @@ def event_listings(request, perf_id: int):
 
     context = {
         "perf": perf or {},
+        "perf_when": perf_when,
+        "dates": dates,
+        "selected_date_id": int(perf_id),
+
         "listings": listings or [],
         "external_platforms": external_platforms if getattr(settings, "SHOW_EXTERNAL_PLATFORMS", False) else [],
         "has_tixy": has_tixy,
@@ -1026,76 +1282,130 @@ def order_summary_view(request, order_id: int):
 
 
 def events_index(request):
-    """
-    Lista eventi attivi (future) ordinati per artista (evento_nome) desc.
-    Paginiamo lato FE su ciò che ritorna l’API (fallback robusto).
-    """
     try:
         page = max(1, int(request.GET.get("page", 1)))
     except Exception:
         page = 1
-    per_page = 30  # 3 colonne x 10 righe
 
-    data = {"results": [], "count": 0, "next": None, "previous": None}
-    try:
-        data = search_performances(q=None, date=None, city=None, page=page, ordering="-evento_nome")
-        if isinstance(data, list):
-            data = {"results": data, "count": len(data)}
-    except Exception:
-        data = {"results": [], "count": 0}
+    per_page = 21  # <-- quello che vuoi vedere SEMPRE
+    ordering = "starts_at_utc"  # meglio per riempire con future
 
-    raw = data.get("results") or []
-    items = []
-    now = datetime.now(dt_timezone.utc)
-    for it in raw:
-        if not isinstance(it, dict):
-            continue
-        iso = (it.get("starts_at_utc") or
-               (it.get("performance_info") or {}).get("starts_at_utc") or "")
+    now_utc = datetime.now(dt_timezone.utc)
+
+    # vogliamo arrivare ad almeno (page * per_page) items futuri,
+    # così poi facciamo lo slice corretto
+    target = page * per_page
+    collected = []
+
+    api_page = 1
+    max_api_pages = 50  # safety
+    api_page_size = 60  # chiediamo un po' di righe per volta
+
+    while len(collected) < target and api_page <= max_api_pages:
+        data = {}
         try:
-            dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            data = search_performances(
+                q=None, date=None, city=None,
+                page=api_page,
+                ordering=ordering,
+                page_size=api_page_size
+            ) or {}
         except Exception:
-            dt = None
-        if not dt or dt <= now:
-            continue
+            break
 
-        evento_nome = (it.get("evento_nome") or (it.get("performance_info") or {}).get("evento_nome") or "").strip()
-        luogo_nome = (it.get("luogo_nome") or (it.get("performance_info") or {}).get("luogo_nome") or "").strip()
-        perf_id = it.get("id") or it.get("performance")
+        raw = data.get("results", data if isinstance(data, list) else []) or []
+        if not raw:
+            break
 
-        items.append({
-            "perf_id": perf_id,
-            "evento_nome": evento_nome,
-            "luogo_nome": luogo_nome,
-            "starts_iso": iso,
-            "starts_fmt": _fmt_iso_dmy_hm(iso),
-        })
+        for it in raw:
+            if not isinstance(it, dict):
+                continue
 
-    items.sort(key=lambda x: (x.get("evento_nome") or "").lower())
+            iso = (it.get("starts_at_utc") or
+                   (it.get("performance_info") or {}).get("starts_at_utc") or "")
+            try:
+                dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=dt_timezone.utc)
+            except Exception:
+                continue
 
-    total = int(data.get("count") or len(items))
+            if dt <= now_utc:
+                continue
+
+            evento_nome = (it.get("evento_nome") or (it.get("performance_info") or {}).get("evento_nome") or "").strip()
+            luogo_nome  = (it.get("luogo_nome")  or (it.get("performance_info") or {}).get("luogo_nome")  or "").strip()
+            perf_id     = it.get("id") or it.get("performance")
+
+            collected.append({
+                "perf_id": perf_id,
+                "evento_nome": evento_nome,
+                "luogo_nome": luogo_nome,
+                "starts_iso": iso,
+                "starts_fmt": _fmt_iso_dmy_hm(iso),
+            })
+
+        # se l'API ha next=None puoi anche interrompere qui:
+        if isinstance(data, dict) and not data.get("next"):
+            break
+
+        api_page += 1
+
+    # ordina (coerente)
+    collected.sort(key=lambda x: (x.get("evento_nome") or "").lower())
+
+    total = len(collected)  # totale “che abbiamo visto” (stima FE)
     start = (page - 1) * per_page
     end = start + per_page
-    page_items = items[start:end]
-    pages = max(1, ceil((len(items) if total == 0 else total) / per_page))
+    page_items = collected[start:end]
 
-    ctx = {
+    pages = max(1, ceil(total / per_page))
+
+    return render(request, "web/events_index.html", {
         "items": page_items,
-        "count": total if total else len(items),
+        "count": total,
         "page": page,
         "pages": pages,
         "has_prev": page > 1,
         "has_next": page < pages,
         "prev_page": page - 1,
         "next_page": page + 1,
-    }
-    return render(request, "web/events_index.html", ctx)
+    })
 
+
+
+def _fetch_event_performances_any(event_id: int):
+    """
+    Prova a recuperare le performances di un evento con più strategie,
+    perché i backend spesso espongono endpoint/parametri diversi.
+    Ritorna una lista di dict (performances grezze) oppure [].
+    """
+    attempts = [
+        # endpoint, params
+        ("performances/", {"evento": event_id, "ordering": "starts_at_utc", "limit": 200}),
+        ("performances/", {"event": event_id, "ordering": "starts_at_utc", "limit": 200}),
+        ("performances/", {"evento_id": event_id, "ordering": "starts_at_utc", "limit": 200}),
+        ("search/performances/", {"evento": event_id, "ordering": "starts_at_utc", "limit": 200}),
+        ("search/performances/", {"event": event_id, "ordering": "starts_at_utc", "limit": 200}),
+        ("search/performances/", {"evento_id": event_id, "ordering": "starts_at_utc", "limit": 200}),
+    ]
+
+    for ep, params in attempts:
+        try:
+            data = _api_request("GET", ep, params=params) or {}
+            rows = data.get("results", data if isinstance(data, list) else []) or []
+            # se torna qualcosa, stop
+            if rows:
+                return rows
+        except Exception:
+            continue
+
+    return []
 
 def event_dates(request, event_id: int):
     """
     Elenca tutte le date (performance) future per un dato EVENTO.
-    Ordinate in modo ASC per data/ora.
+    Mostra una "data principale" + elenco "altre date".
     """
     if not event_id:
         messages.error(request, "Evento non valido.")
@@ -1109,25 +1419,59 @@ def event_dates(request, event_id: int):
         evento = get_event(event_id) or {}
 
         perf_list = (
-                evento.get("performances")
-                or evento.get("performance_set")
-                or []
+            evento.get("performances")
+            or evento.get("performance_set")
+            or []
         )
 
+        # Caso 1: performances nel dettaglio evento ma come ID (lista di int/string)
+        # → proviamo a trasformarle in dict chiamando get_performance(id)
+        if perf_list and all(isinstance(x, (int, str)) for x in perf_list):
+            tmp = []
+            for pid in perf_list[:200]:
+                try:
+                    tmp.append(get_performance(int(pid)))
+                except Exception:
+                    pass
+            perf_list = tmp
+
+        # Caso 2: nessuna performance nel dettaglio evento → fallback API performances
         if not perf_list:
-            nome_evento = (evento.get("nome") or evento.get("title") or "").strip()
-            data = search_performances(q=nome_evento or None)
-            raw = data.get("results", data if isinstance(data, list) else []) if data else []
-            perf_list = [p for p in raw if str(p.get("evento")) == str(event_id)]
+            perf_list = _fetch_event_performances_any(event_id)
+
+        # Caso 3: fallback finale (la tua ricerca per nome) se ancora vuoto
+        if not perf_list:
+            nome_evento = (
+                (evento.get("nome_evento") or "")
+                or (evento.get("nome") or "")
+                or (evento.get("title") or "")
+            ).strip()
+
+            if nome_evento:
+                data = search_performances(q=nome_evento)
+                raw = data.get("results", data if isinstance(data, list) else []) if data else []
+                # filtra per event_id
+                perf_list = [
+                    p for p in raw
+                    if str((p.get("evento") or p.get("event") or p.get("evento_id")
+                            or (p.get("performance_info") or {}).get("evento")
+                            or (p.get("performance_info") or {}).get("event")
+                            or (p.get("performance_info") or {}).get("evento_id")
+                            )) == str(event_id)
+                ]
 
         now_utc = datetime.now(dt_timezone.utc)
         norm = []
+
         for p in perf_list:
+            # normalizza: a volte arriva come {"performance_info": {...}} o direttamente {...}
             perf = p.get("performance_info") if isinstance(p, dict) and "performance_info" in p else p
             perf = perf or {}
-            perf_id = perf.get("id") or p.get("id")
 
+            perf_id = perf.get("id") or (p.get("id") if isinstance(p, dict) else None)
             iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
+
+            # tieni solo future
             keep = True
             try:
                 dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
@@ -1135,13 +1479,25 @@ def event_dates(request, event_id: int):
                     dt = dt.replace(tzinfo=dt_timezone.utc)
                 keep = dt >= now_utc
             except Exception:
-                pass
+                # se non parsabile, la teniamo (meglio mostrarla che perdere tutto)
+                keep = True
 
             if keep and perf_id:
                 norm.append({
-                    "id": perf_id,
-                    "evento_nome": evento.get("nome") or evento.get("title") or "",
-                    "luogo_nome": perf.get("luogo_nome") or perf.get("venue") or "",
+                    "id": int(perf_id),
+                    "evento_nome": (
+                        perf.get("evento_nome")
+                        or evento.get("nome_evento")
+                        or evento.get("nome")
+                        or evento.get("title")
+                        or ""
+                    ),
+                    "luogo_nome": (
+                        perf.get("luogo_nome")
+                        or perf.get("venue")
+                        or evento.get("luogo_nome")
+                        or ""
+                    ),
                     "starts_iso": iso,
                     "starts_fmt": _fmt_iso_dmy_hm(iso),
                 })
@@ -1152,17 +1508,36 @@ def event_dates(request, event_id: int):
     except Exception as e:
         error = str(e)
 
-    return render(
-        request,
-        "web/event_dates.html",
-        {
-            "event_id": event_id,
-            "evento": evento or {},
-            "items": performances,
-            "error": error,
-            "count": len(performances),
-        },
-    )
+    # separa "prima data" e "altre date"
+    main_date = performances[0] if performances else None
+    other_dates = performances[1:] if len(performances) > 1 else []
+
+    return render(request, "web/event_dates.html", {
+        "event_id": event_id,
+        "evento": evento or {},
+        "main_date": main_date,
+        "other_dates": other_dates,
+        "items": performances,  # compat (se nel template usi ancora items)
+        "error": error,
+        "count": len(performances),
+    })
+
+
+def event_dates_from_perf(request, perf_id: int):
+    """
+    Ponte: dato perf_id, ricava event_id dalla performance e redirecta a /evento/<event_id>/date/
+    """
+    try:
+        perf = get_performance(perf_id) or {}
+
+    except Exception:
+        return HttpResponseNotFound("Performance non trovata.")
+
+    event_id = perf.get("evento") or perf.get("event") or perf.get("evento_id")
+    if not event_id:
+        return HttpResponseNotFound("Evento non disponibile per questa performance.")
+
+    return redirect(reverse("event_dates", args=[int(event_id)]))
 
 
 def rivenditori(request):
@@ -1694,7 +2069,6 @@ def rivendita(request):
     return render(request, "web/rivendita.html", ctx)
 
 #abbonamenti area riservata
-from datetime import datetime
 
 
 def _map_sub_status(item: dict) -> str:
@@ -1924,7 +2298,7 @@ def ticket_download_proxy(request, order_id: int):
 
         filename = filename or f"biglietto_{order_id}.pdf"
         resp = HttpResponse(r.content, content_type=r.headers.get("Content-Type", "application/pdf"))
-        resp["Content-Disposition"] = f'attachment; filename="{urlquote(filename)}"'
+        resp["Content-Disposition"] = f'attachment; filename="{quote(filename)}"'
         return resp
 
     except requests.HTTPError as e:
