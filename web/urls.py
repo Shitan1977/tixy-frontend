@@ -12,6 +12,7 @@ urlpatterns = [
     path("termini/", views.termini, name="termini"),
     path("rivendita/", views.rivendita, name="rivendita"),
     path("privacy/", views.privacy, name="privacy"),
+    path("contatti/", views.contatti, name="contatti"),  # <-- AGGIUNGI QUESTA RIGA
 
     # Auth / account
     path("login/", views.login, name="login"),
@@ -74,5 +75,8 @@ urlpatterns = [
     path("evento/perf/<int:perf_id>/date/", views.event_dates_from_perf, name="event_dates_from_perf"),
     path("evento/<int:event_id>/date/", views.event_dates, name="event_dates"),
     path("evento/<int:perf_id>/", views.event_listings, name="event_listings"),
+
+    # API proxy per autocomplete
+    path('api/search/performances/', views.api_search_performances, name='api-search-performances'),
 
 ]

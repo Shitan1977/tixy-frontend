@@ -21,11 +21,11 @@
           </p>
 
           <form method="post"
-                action="{% url 'attiva_alert' perf.evento %}"
+                action="{% url 'attiva_alert' perf.id %}"
                 class="js-one-click d-flex gap-2">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
-            <button type="submit" class="theme-btn theme-btn2" {% if following %}disabled{% endif %}>
+            <button type="submit" class="theme-btn" {% if following %}disabled{% endif %}>
               {% if following %}Notifiche attive ✓{% else %}
                 <i class="fa-regular fa-bell"></i> Attiva notifiche
               {% endif %}
@@ -45,7 +45,7 @@
             Monitoraggio più frequente. (Da € 6,99)
           </p>
           <a class="theme-btn w-100"
-             href="{% url 'attiva_pro' %}?event={{ perf.evento }}&next={{ request.get_full_path|urlencode }}">
+             href="{% url 'attiva_pro' %}?event={{ perf.id }}&next={{ request.get_full_path|urlencode }}">
             Attiva PRO
           </a>
         </div>

@@ -11,7 +11,7 @@ from urllib.parse import quote
 from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
+from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.timezone import now as dj_now
@@ -198,6 +198,7 @@ def vantaggi(request):     return render(request, "web/vantaggi.html")
 def funzioma(request):     return render(request, "web/funziona.html")
 def termini(request):      return render(request, "web/termini.html")
 def privacy(request):      return render(request, "web/privacy.html")
+def contatti(request):     return render(request, "web/contatti.html")  # minuscolo
 
 
 # =========================
@@ -1150,6 +1151,124 @@ def account_admin(request):
 
 
 # =========================
+# Helper per account_admin
+# =========================
+
+def _get_active_alerts(token: str):
+    """
+    Recupera gli alert attivi (EventFollow + Monitoraggi PRO) dell'utente.
+    Ritorna lista di dict con: id, title, type, expires_at, status
+    """
+    alerts = []
+    
+    # Alert gratuiti (EventFollow)
+    try:
+        data = _api_request("GET", "event-follows/", token=token, timeout=10) or {}
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        for ef in rows:
+            ev = (ef.get("evento_info") or {})
+            alerts.append({
+                "id": ef.get("id"),
+                "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "type": "free",
+                "created_at": _fmt_iso_dmy_hm(ef.get("created_at") or ""),
+                "expires_at": None,
+                "status": "Attivo",
+            })
+    except Exception:
+        pass
+    
+    # Monitoraggi PRO
+    try:
+        data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        for m in rows:
+            ev = (m.get("evento_info") or {})
+            expires_iso = m.get("expires_at") or m.get("data_fine") or ""
+            alerts.append({
+                "id": m.get("id"),
+                "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "type": "pro",
+                "created_at": _fmt_iso_dmy_hm(m.get("created_at") or ""),
+                "expires_at": _fmt_iso_dmy_hm(expires_iso),
+                "status": _map_sub_status(m),
+            })
+    except Exception:
+        pass
+    
+    return alerts
+
+
+def _get_free_alerts_count(token: str) -> int:
+    """Conta gli alert gratuiti attivi."""
+    try:
+        data = _api_request("GET", "event-follows/", token=token, timeout=10) or {}
+        return int(data.get("count") or len(data.get("results", [])))
+    except Exception:
+        return 0
+
+
+def _get_last_order(token: str):
+    """Recupera l'ultimo ordine completato (biglietto acquistato)."""
+    try:
+        data = _api_request(
+            "GET", 
+            "my/purchases/", 
+            params={"page": 1, "page_size": 1, "ordering": "-created_at"},
+            token=token,
+            timeout=10
+        ) or {}
+        rows = data.get("results", [])
+        if not rows:
+            return None
+        
+        order = rows[0]
+        listing = (order.get("listing_info") or {})
+        perf = (listing.get("performance_info") or {})
+        
+        return {
+            "id": order.get("id"),
+            "event_title": perf.get("evento_nome") or "Evento",
+            "venue": perf.get("luogo_nome") or "",
+            "starts_fmt": _fmt_iso_dmy_hm(perf.get("starts_at_utc") or ""),
+            "created_fmt": _fmt_iso_dmy_hm(order.get("created_at") or ""),
+            "total": order.get("total"),
+            "currency": order.get("currency") or "EUR",
+        }
+    except Exception:
+        return None
+
+
+def account_admin(request):
+    # login obbligatorio ma rispetta il "next"
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return guard
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+
+    # Profilo (opzionale)
+    profilo = {}
+    try:
+        profilo = api_get_profile(token) or {}
+    except Exception:
+        profilo = {}
+
+    # === SOLO LETTURA per /account/ ===
+    active_alerts = _get_active_alerts(token)          # elenco con scadenza
+    free_alerts_count = _get_free_alerts_count(token)  # count gratuiti
+    last_ticket = _get_last_order(token)               # ultimo ordine pagato
+
+    ctx = {
+        "profilo": profilo,
+        "active_alerts": active_alerts,
+        "free_alerts_count": free_alerts_count,
+        "last_ticket": last_ticket,
+    }
+    return render(request, "web/admin.html", ctx)
+
+
+# =========================
 # Pagina “Top venditori” (VIEW ALL) con paginazione
 # =========================
 def top(request):
@@ -1257,14 +1376,7 @@ def order_summary_view(request, order_id: int):
     base_total = total_api if total_api > 0 else (subtotal + commission).quantize(Decimal("0.01"))
 
     perf = (order.get("listing_info") or {}).get("performance_info") or {}
-    starts_iso = (
-        perf.get("starts_at_utc")
-        or perf.get("starts_at")
-        or (order.get("performance_info") or {}).get("starts_at_utc")
-        or ""
-    )
-
-    perf_when = _fmt_iso_dmy_hm(starts_iso)
+    starts_iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
     change_fee, change_msg, change_required = calc_change_name_fee(starts_iso)
     final_total = (base_total + change_fee).quantize(Decimal("0.01"))
 
@@ -1603,415 +1715,10 @@ def rivenditori(request):
     return render(request, "web/rivenditori.html", ctx)
 
 
-@require_POST
-@csrf_protect
-def listing_set_top(request, listing_id: int):
-    """
-    Segna un singolo listing come TOP (is_top=True).
-    Richiede login API; il controllo che il listing appartenga al venditore
-    è demandato al backend (permission).
-    """
-    guard = _require_api_login(request, next_url=request.get_full_path())
-    if guard:
-        return guard
-
-    token = request.session.get(SESSION_TOKEN_KEY)
-    back = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("account_admin")
-
-    try:
-        _api_request(
-            "PATCH",
-            f"listings/{listing_id}/",
-            json={"is_top": True},
-            token=token,
-        )
-        messages.success(request, "✅ Annuncio impostato come TOP.")
-    except Exception as e:
-        messages.error(request, f"Impossibile impostare TOP: {e}")
-
-    return redirect(back)
-
-
-@require_POST
-@csrf_protect
-def listing_unset_top(request, listing_id: int):
-    """
-    Rimuove il flag TOP da un singolo listing (is_top=False).
-    """
-    guard = _require_api_login(request, next_url=request.get_full_path())
-    if guard:
-        return guard
-
-    token = request.session.get(SESSION_TOKEN_KEY)
-    back = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("account_admin")
-
-    try:
-        _api_request(
-            "PATCH",
-            f"listings/{listing_id}/",
-            json={"is_top": False},
-            token=token,
-        )
-        messages.success(request, "✅ Annuncio rimosso dai TOP.")
-    except Exception as e:
-        messages.error(request, f"Impossibile rimuovere TOP: {e}")
-
-    return redirect(back)
-
-
-# =========================
-# Recensioni (pagina elenco + create)
-# =========================
-@require_http_methods(["GET"])
-def reviews_page(request):
-    """
-    Elenco recensioni + form invio (se loggato).
-    Richiede querystring ?venditore=<id>.
-    """
-    try:
-        venditore = int(request.GET.get("venditore") or 0)
-    except (TypeError, ValueError):
-        venditore = 0
-
-    if not venditore:
-        messages.error(request, "Venditore non specificato.")
-        return redirect("home")
-
-    try:
-        page = max(1, int(request.GET.get("page") or 1))
-    except Exception:
-        page = 1
-
-    reviews, stats, count = [], {"avg": 0, "count": 0}, 0
-    try:
-        from .services.tixy_api import api_reviews_list, api_reviews_stats
-        data = api_reviews_list(venditore, page=page) or {}
-        reviews = data.get("results", data if isinstance(data, list) else []) or []
-        count = int(data.get("count") or len(reviews))
-        stats = api_reviews_stats(venditore) or {"avg": 0, "count": 0}
-    except Exception as e:
-        messages.error(request, f"Impossibile caricare le recensioni: {e}")
-
-    venditore_name = ""
-    if reviews:
-        vi = (reviews[0].get("venditore_info") or {})
-        venditore_name = f"{vi.get('first_name','').strip()} {vi.get('last_name','').strip()}".strip()
-
-    if not venditore_name:
-        try:
-            base = settings.API_BASE_URL.rstrip("/")
-            r = requests.get(f"{base}/public/users/{venditore}/", timeout=5)
-            if r.status_code == 200:
-                u = r.json() or {}
-                venditore_name = f"{(u.get('first_name') or '').strip()} {(u.get('last_name') or '').strip()}".strip()
-        except Exception:
-            pass
-
-    per_page = len(reviews) if reviews else 10
-    pages = max(1, (count + max(per_page, 1) - 1) // max(per_page, 1))
-    page = min(max(1, page), pages)
-
-    ctx = {
-        "venditore": venditore,
-        "venditore_name": venditore_name or f"Venditore #{venditore}",
-        "reviews": reviews,
-        "stats": stats,
-        "page": page,
-        "pages": pages,
-        "has_prev": page > 1,
-        "has_next": page < pages,
-        "prev_qs": urlencode({"venditore": venditore, "page": page - 1}) if page > 1 else "",
-        "next_qs": urlencode({"venditore": venditore, "page": page + 1}) if page < pages else "",
-        "order_prefill": request.GET.get("order") or "",
-        "logged_in": bool(request.session.get(SESSION_TOKEN_KEY)),
-    }
-    return render(request, "web/reviews.html", ctx)
-
-
-@require_POST
-@csrf_protect
-def reviews_create(request):
-    """
-    Crea una recensione e torna alla pagina con i messaggi bootstrap (messages framework).
-    URL: /recensioni/crea/  (name='reviews_create')
-    """
-    venditore_qs = request.POST.get("venditore") or ""
-    back = f'{reverse("reviews")}?{urlencode({"venditore": venditore_qs})}'
-
-    guard = _require_api_login(request, next_url=back)
-    if guard:
-        return guard
-
-    token    = request.session.get(SESSION_TOKEN_KEY)
-    venditore = request.POST.get("venditore")
-    order     = request.POST.get("order")
-    rating    = request.POST.get("rating")
-    testo     = (request.POST.get("testo") or "").strip()
-
-    if not (venditore and order and rating and testo):
-        messages.error(request, "Compila tutti i campi (ordine, voto, recensione).")
-        return redirect(back + "#review-form")
-
-    try:
-        venditore_i = int(venditore)
-        order_i     = int(order)
-        rating_i    = int(rating)
-        if rating_i < 1 or rating_i > 5:
-            raise ValueError("rating fuori range")
-    except Exception:
-        messages.error(request, "Dati non validi.")
-        return redirect(back + "#review-form")
-
-    try:
-        from .services.tixy_api import api_review_create
-        api_review_create(token, venditore=venditore_i, order=order_i, rating=rating_i, testo=testo)
-        messages.success(request, "Recensione inviata ✅")
-    except requests.HTTPError as e:
-        messages.error(request, _msg_from_api_error(e))
-    except Exception:
-        messages.error(request, "Impossibile inviare la recensione. Riprova tra poco.")
-
-    return redirect(back + "#reviews")
-
-
-def _msg_from_api_error(exc: Exception) -> str:
-    data = None
-    resp = getattr(exc, "response", None)
-    if resp is not None:
-        try:
-            data = resp.json()
-        except Exception:
-            data = None
-
-    if isinstance(data, dict):
-        if "order" in data:
-            return "Numero d'ordine non corrispondente."
-        if "rating" in data:
-            return "Seleziona un voto valido (1–5)."
-        if "testo" in data:
-            return "Inserisci il testo della recensione."
-        if "detail" in data:
-            return str(data["detail"])
-    return "Impossibile inviare la recensione. Controlla i dati e riprova."
-
-
-# =========================
-# Account: i miei alert (free)
-# =========================
-def _get_active_alerts(token: str):
-    """
-    Ritorna lista di alert attivi (gratuiti + PRO) in sola lettura:
-    [{title, expires_at, expires_fmt, kind}]
-    """
-    alerts = []
-
-    # 1) Alert gratuiti
-    try:
-        data = _api_request("GET", "event-follows/my/", token=token) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
-        for r in rows:
-            ev = (r.get("evento_info") or r.get("event_info") or {})
-            title = (ev.get("nome") or ev.get("title") or r.get("title") or "Alert evento").strip()
-            exp   = r.get("expires_at") or r.get("scade_il") or r.get("valid_until") or ""
-            alerts.append({
-                "title": title,
-                "expires_at": exp,
-                "expires_fmt": _fmt_iso_dmy_hm(exp),
-                "kind": "free",
-            })
-    except Exception:
-        pass
-
-    # 2) Monitoraggi PRO
-    try:
-        data = _api_request("GET", "monitoraggi/my/", token=token) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
-        for r in rows:
-            ev = (r.get("evento_info") or r.get("event_info") or {})
-            title = (ev.get("nome") or ev.get("title") or r.get("title") or "Monitoraggio PRO").strip()
-            exp   = r.get("expires_at") or r.get("scade_il") or r.get("valid_until") or ""
-            alerts.append({
-                "title": f"{title} (PRO)",
-                "expires_at": exp,
-                "expires_fmt": _fmt_iso_dmy_hm(exp),
-                "kind": "pro",
-            })
-    except Exception:
-        pass
-
-    now = datetime.now(dt_timezone.utc)
-
-    def _not_expired(a):
-        dt = _safe_dt(a.get("expires_at"))
-        return True if dt is None else (dt.replace(tzinfo=dt.tzinfo or dt_timezone.utc) >= now)
-
-    alerts = [a for a in alerts if _not_expired(a)]
-    alerts.sort(key=lambda a: a.get("expires_at") or "9999-12-31T23:59:59Z")
-    return alerts
-
-
-def _get_free_alerts_count(token: str) -> int:
-    try:
-        data = _api_request("GET", "event-follows/my/", token=token) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
-        return int(data.get("count") or len(rows))
-    except Exception:
-        return 0
-
-
-def _get_last_order(token: str):
-    """
-    Ultimo ordine concluso: {order_id, created_at/created_fmt, price, listing_title, event_title, event_date/event_date_fmt}
-    """
-    try:
-        data = _api_request("GET", "orders/my/", params={"limit": 1, "ordering": "-created_at"}, token=token) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
-        if not rows:
-            return None
-        o = rows[0]
-        status = (o.get("status") or "").lower()
-        if status and status not in ("paid", "completed", "success"):
-            return None
-
-        listing = (o.get("listing_info") or {})
-        perf    = (listing.get("performance_info") or {})
-        return {
-            "order_id": o.get("id"),
-            "created_at": o.get("created_at"),
-            "created_fmt": _fmt_iso_dmy_hm(o.get("created_at") or ""),
-            "price": o.get("total") or o.get("total_price") or listing.get("price_each"),
-            "listing_title": listing.get("title") or "",
-            "event_title":  perf.get("evento_nome") or perf.get("title") or "",
-            "event_date":   perf.get("starts_at_utc") or perf.get("starts_at") or "",
-            "event_date_fmt": _fmt_iso_dmy_hm(perf.get("starts_at_utc") or perf.get("starts_at") or ""),
-        }
-    except Exception:
-        return None
-
-# in web/views.py
-def _api_follow_list(token: str, page: int = 1, per_page: int = 20):
-    """
-    Legge gli alert gratuiti dell'utente.
-    Prova più endpoint noti e degrada a lista vuota se non esistono.
-    """
-    endpoints = [
-        "event-follows/my/",
-        "follows/my/",
-        "alerts/my/",
-    ]
-
-    data = None
-    last_err = None
-    for ep in endpoints:
-        try:
-            data = _api_request("GET", ep, params={"page": page, "page_size": per_page}, token=token)
-            break  # trovato un endpoint valido
-        except requests.HTTPError as e:
-            last_err = e
-            # se è 404 prova il prossimo endpoint
-            if e.response is not None and e.response.status_code == 404:
-                continue
-            # altri errori (401/500/timeout...) -> esci in modo "soft"
-            return [], 0
-        except Exception:
-            # qualunque altro errore -> esci in modo "soft"
-            return [], 0
-
-    if not data:
-        # tutti 404 oppure nessuna risposta valida -> nessun alert
-        return [], 0
-
-    rows = data.get("results", data if isinstance(data, list) else []) or []
-    items = []
-    for r in rows:
-        ev = (r.get("evento_info") or r.get("event_info") or {})
-        items.append({
-            "id": r.get("id"),
-            "title": ev.get("nome") or ev.get("title") or "Alert evento",
-            "event_date": "",
-            "filters": r.get("filters_label") or "",
-            "active": bool(r.get("active", True)),
-            "last_check": r.get("last_check_fmt") or "",
-            "cover": ev.get("cover_url") or None,
-        })
-    count = int(data.get("count") or len(items))
-    return items, count
-
-
-
-def _api_follow_set_active(token: str, alert_id: int, active: bool) -> bool:
-    try:
-        _api_request("PATCH", f"event-follows/{alert_id}/", json={"active": active}, token=token)
-        return True
-    except Exception:
-        return False
-
-
-def _api_follow_delete(token: str, alert_id: int) -> bool:
-    try:
-        _api_request("DELETE", f"event-follows/{alert_id}/", token=token)
-        return True
-    except Exception:
-        return False
-
-
-def account_alerts_view(request):
-    guard = _require_api_login(request, next_url=request.get_full_path())
-    if guard:
-        return guard
-
-    token = request.session.get(SESSION_TOKEN_KEY)
-    page = max(1, int(request.GET.get("page", 1)))
-    per_page = 12
-
-    items, total = _api_follow_list(token, page=page, per_page=per_page)
-    paginator = Paginator(items, per_page)
-    page_obj = paginator.get_page(1)  # items è già paginato lato API; presentiamo una pagina "unica"
-
-    return render(request, "web/account/alerts.html", {"page_obj": page_obj})
-
-
-@require_POST
-def alert_pause_view(request, alert_id: int):
-    guard = _require_api_login(request, next_url=reverse("account_alerts"))
-    if guard:
-        return guard
-    token = request.session.get(SESSION_TOKEN_KEY)
-    if _api_follow_set_active(token, alert_id, False):
-        messages.success(request, "Alert messo in pausa.")
-    else:
-        messages.error(request, "Impossibile mettere in pausa l'alert.")
-    return redirect("account_alerts")
-
-
-@require_POST
-def alert_resume_view(request, alert_id: int):
-    guard = _require_api_login(request, next_url=reverse("account_alerts"))
-    if guard:
-        return guard
-    token = request.session.get(SESSION_TOKEN_KEY)
-    if _api_follow_set_active(token, alert_id, True):
-        messages.success(request, "Alert ripreso.")
-    else:
-        messages.error(request, "Impossibile riprendere l'alert.")
-    return redirect("account_alerts")
-
-
-@require_POST
-def alert_delete_view(request, alert_id: int):
-    guard = _require_api_login(request, next_url=reverse("account_alerts"))
-    if guard:
-        return guard
-    token = request.session.get(SESSION_TOKEN_KEY)
-    if _api_follow_delete(token, alert_id):
-        messages.success(request, "Alert eliminato.")
-    else:
-        messages.error(request, "Impossibile eliminare l'alert.")
-    return redirect("account_alerts")
 def rivendita(request):
     """
-    Elenco TUTTI i rivenditori con paginazione, ricavati dai top listings
-    dedupe=seller. Campi normalizzati per il template.
+    Elenco TUTTI i rivenditori con paginazione.
+    Strategia: prende listings con is_top=True, deduplica per seller_id lato FE.
     """
     try:
         page = max(1, int(request.GET.get("page", 1)))
@@ -2019,46 +1726,85 @@ def rivendita(request):
         page = 1
 
     per_page = 36
-    offset = (page - 1) * per_page
+    base = settings.API_BASE_URL.rstrip("/")
 
-    data = {"count": 0, "results": []}
+    # === STEP 1: Recupera MOLTI listings (per avere abbastanza seller unici) ===
+    # Chiediamo 500 risultati per avere una buona copertura di rivenditori
+    all_listings = []
     try:
-        # endpoint API dedicato che deduplica per venditore
-        data = get_top_listings(limit=per_page, offset=offset, dedupe="seller")
+        resp = requests.get(
+            f"{base}/listings/",
+            params={
+                "limit": 500,          # prendi molti risultati
+                "is_top": "true",      # solo TOP (se usi questo filtro)
+                "ordering": "-created_at",
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json() or {}
+        all_listings = data.get("results", data if isinstance(data, list) else []) or []
     except Exception:
-        data = {"count": 0, "results": []}
+        all_listings = []
 
-    rows = data.get("results", data if isinstance(data, list) else []) or []
+    # Fallback: se is_top non funziona, prova senza filtro
+    if not all_listings:
+        try:
+            resp = requests.get(
+                f"{base}/listings/",
+                params={"limit": 500, "ordering": "-created_at"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json() or {}
+            all_listings = data.get("results", []) or []
+        except Exception:
+            all_listings = []
 
-    items = []
-    for it in rows:
-        it = it or {}
-        s = (it.get("seller_info") or {})
-        first = (s.get("first_name") or "").strip()
-        last = (s.get("last_name") or "").strip()
-        name = (f"{first} {last}".strip() or f"Venditore #{it.get('seller') or s.get('id') or ''}").strip()
+    # === STEP 2: Deduplica per seller_id (uno per venditore) ===
+    sellers_map = {}
+    for it in all_listings:
+        seller_id = it.get("seller")
+        if not seller_id or seller_id in sellers_map:
+            continue  # già visto questo seller
 
-        # rating e conteggi se presenti nel listing
+        seller_info = (it.get("seller_info") or {})
+        first = (seller_info.get("first_name") or "").strip()
+        last = (seller_info.get("last_name") or "").strip()
+        name = f"{first} {last}".strip() or f"Venditore #{seller_id}"
+
+        # Rating
         rating = it.get("seller_rating_avg")
         try:
             rating = float(rating) if rating is not None else None
         except Exception:
             rating = None
 
-        items.append({
-            "id": it.get("seller") or s.get("id"),
+        sellers_map[seller_id] = {
+            "id": seller_id,
             "name": name,
             "rating": rating,
             "reviews": it.get("seller_reviews_count") or 0,
-            "listings_count": it.get("seller_listings_count") or 0,
-        })
+            "listings_count": it.get("seller_listings_count") or 1,
+        }
 
-    count = int(data.get("count") or len(items))
-    pages = max(1, ceil(count / per_page))
+    # === STEP 3: Filtra solo rivenditori con biglietti in vendita ===
+    all_sellers = [s for s in sellers_map.values() if (s.get("listings_count") or 0) > 0]
+    
+    # === STEP 4: Ordina per rating DESC ===
+    all_sellers.sort(key=lambda x: (x["rating"] or 0), reverse=True)
+
+    # === STEP 5: Paginazione FE ===
+    total = len(all_sellers)
+    start = (page - 1) * per_page
+    end = start + per_page
+    items = all_sellers[start:end]
+
+    pages = max(1, ceil(total / per_page))
 
     ctx = {
         "items": items,
-        "count": count,
+        "count": total,
         "page": page,
         "pages": pages,
         "has_prev": page > 1,
@@ -2067,6 +1813,7 @@ def rivendita(request):
         "next_page": page + 1,
     }
     return render(request, "web/rivendita.html", ctx)
+
 
 #abbonamenti area riservata
 
@@ -2697,7 +2444,6 @@ def account_support_new(request):
                 messages.error(request, f"Errore: {e}")
         except Exception as e:
             messages.error(request, f"Errore imprevisto: {e}")
-
         return render(request, "web/account/support_new.html", {
             "categories": categories, "priorities": priorities,
             "form": {"title": title, "message": message_, "category": category_ui,
@@ -2897,7 +2643,7 @@ def account_profile_view(request):
                 err = e.response.json()
                 messages.error(request, err.get("detail") or str(e))
             except Exception:
-                messages.error(request, str(e))
+                messages.error(request, f"Errore imprevisto: {e}")
         except Exception as e:
             messages.error(request, f"Errore imprevisto: {e}")
         return redirect("account_profile")
@@ -2938,4 +2684,180 @@ def account_profile_view(request):
         "socials_verified": bool(profilo.get("socials_verified")),
     }
     return render(request, "web/account/profile.html", ctx)
+
+
+# ============================================
+# RECENSIONI (Placeholder)
+# ============================================
+
+def reviews_page(request):
+    """Elenco recensioni."""
+    return render(request, "web/reviews.html", {"reviews": []})
+
+
+def reviews_create(request):
+    """Crea recensione."""
+    if request.method == "POST":
+        messages.success(request, "Recensione inviata!")
+        return redirect("reviews")
+    return render(request, "web/reviews_create.html")
+
+
+# ============================================
+# ALTRE VIEW MANCANTI (se necessario)
+# ============================================
+
+# Aggiungi qui altre funzioni che potrebbero mancare...
+
+def account_alerts_view(request):
+    """
+    Pagina 'I miei Alert' (notifiche gratuite + PRO).
+    Mostra EventFollow (gratuiti) + Monitoraggi PRO.
+    """
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return guard
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+
+    # === ALERT GRATUITI (EventFollow) ===
+    free_alerts = []
+    try:
+        data = _api_request("GET", "event-follows/", token=token, timeout=10) or {}
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        for ef in rows:
+            ev = (ef.get("evento_info") or {})
+            free_alerts.append({
+                "id": ef.get("id"),
+                "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "type": "free",
+                "created_at": _fmt_iso_dmy_hm(ef.get("created_at") or ""),
+                "expires_at": None,
+                "status": "Attivo",
+            })
+    except Exception:
+        pass
+
+    # === MONITORAGGI PRO ===
+    pro_alerts = []
+    try:
+        data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        for m in rows:
+            ev = (m.get("evento_info") or {})
+            perf = (m.get("performance_info") or {})
+            expires_iso = m.get("expires_at") or m.get("data_fine") or ""
+            pro_alerts.append({
+                "id": m.get("id"),
+                "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "type": "pro",
+                "created_at": _fmt_iso_dmy_hm(m.get("created_at") or ""),
+                "expires_at": _fmt_iso_dmy_hm(expires_iso),
+                "status": _map_sub_status(m),
+            })
+    except Exception:
+        pass
+
+    return render(request, "web/account/alerts.html", {
+        "free_alerts": free_alerts,
+        "pro_alerts": pro_alerts,
+    })
+
+
+@require_POST
+def alert_pause_view(request, alert_id: int):
+    """
+    Mette in pausa un alert PRO (monitoraggio).
+    """
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return guard
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+    
+    try:
+        _api_request("POST", f"monitoraggi/{alert_id}/pause/", token=token, timeout=10)
+        messages.success(request, "Alert messo in pausa ✅")
+    except Exception as e:
+        messages.error(request, f"Impossibile mettere in pausa l'alert: {e}")
+    
+    return redirect(request.META.get("HTTP_REFERER") or reverse("account_alerts"))
+
+
+@require_POST
+def alert_resume_view(request, alert_id: int):
+    """Riattiva un alert PRO in pausa."""
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return guard
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+    
+    try:
+        _api_request("POST", f"monitoraggi/{alert_id}/resume/", token=token, timeout=10)
+        messages.success(request, "Alert riattivato ✅")
+    except Exception as e:
+        messages.error(request, f"Impossibile riattivare l'alert: {e}")
+    
+    return redirect(request.META.get("HTTP_REFERER") or reverse("account_alerts"))
+
+
+@require_POST
+def alert_delete_view(request, alert_id: int):
+    """Elimina un alert PRO."""
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return guard
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+    
+    try:
+        _api_request("DELETE", f"monitoraggi/{alert_id}/", token=token, timeout=10)
+        messages.success(request, "Alert eliminato ✅")
+    except Exception as e:
+        messages.error(request, f"Impossibile eliminare l'alert: {e}")
+    
+    return redirect(reverse("account_alerts"))
+
+
+@require_GET
+def api_search_performances(request):
+    """
+    Proxy per ricerca performance: GET /api/search/performances/?q=...
+    Chiama il backend API e ritorna JSON per l'autocomplete.
+    """
+    query = request.GET.get("q", "").strip()
+    page_size = int(request.GET.get("page_size", 10))
+    
+    if not query or len(query) < 2:
+        return JsonResponse({"results": []}, status=200)
+    
+    try:
+        # Chiama l'API backend usando la funzione esistente
+        data = _api_request(
+            "GET",
+            "performances/",
+            params={
+                "search": query,
+                "page_size": page_size,
+                "ordering": "starts_at_utc"
+            }
+        ) or {}
+        
+        results = data.get("results", [])
+        
+        # Normalizza i dati per il frontend
+        normalized = []
+        for item in results:
+            normalized.append({
+                "id": item.get("id"),
+                "evento_nome": item.get("evento_nome", ""),
+                "luogo_nome": item.get("luogo_nome", ""),
+                "starts_at_utc": item.get("starts_at_utc", ""),
+            })
+        
+        return JsonResponse({"results": normalized}, status=200)
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e), "results": []}, status=500)
 

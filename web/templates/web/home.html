@@ -167,7 +167,13 @@
             </div>
 
             <div class="movie-content">
-              <h6 class="movie-title">{{ item.performance_info.evento_nome|default:"Evento" }}</h6>
+              <h6 class="movie-title">
+                {% if perfid %}
+                  <a href="{% url 'event-listings' perfid %}">{{ item.performance_info.evento_nome|default:"Evento" }}</a>
+                {% else %}
+                  {{ item.performance_info.evento_nome|default:"Evento" }}
+                {% endif %}
+              </h6>
 
               <ul class="event-meta">
                 <li><i class="far fa-location-dot"></i> {{ item.performance_info.luogo_nome|default:"" }}</li>
@@ -247,7 +253,13 @@
           </div>
 
           <div class="movie-content">
-            <h6 class="movie-title">{{ item.performance_info.evento_nome|default:"Evento" }}</h6>
+            <h6 class="movie-title">
+              {% if perfid %}
+                <a href="{% url 'event-listings' perfid %}">{{ item.performance_info.evento_nome|default:"Evento" }}</a>
+              {% else %}
+                {{ item.performance_info.evento_nome|default:"Evento" }}
+              {% endif %}
+            </h6>
 
             <ul class="event-meta">
               <li><i class="far fa-location-dot"></i> {{ item.performance_info.luogo_nome|default:"" }}</li>
@@ -407,12 +419,11 @@
         <div class="row align-items-center">
           <div class="col-lg-7 mx-auto">
             <div class="cta-content text-center">
-              <h1>Biglietti non disponibili? Ti avvisiamo noi.</h1>
+              <h1 style="color: var(--heading-color);">Biglietti non disponibili? Ti avvisiamo noi.</h1>
               <p>Abbonati a Tixy e ricevi una notifica immediata quando tornano disponibili o scendono di prezzo.</p>
               <a href="{% url 'attiva_pro' %}" class="theme-btn">
                 <i class="far fa-bell"></i> Attiva gli alert
               </a>
-              {# <small class="d-block mt-2">Disdici quando vuoi · Nessuno spam</small> #}
             </div>
           </div>
         </div>

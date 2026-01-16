@@ -139,20 +139,20 @@
 
 <!-- CTA -->
 <div class="cta-area pb-90 pt-70">
-  <div class="container">
-    <div class="cta-wrapper">
-      <div class="row align-items-center">
-        <div class="col-lg-7 mx-auto">
-          <div class="cta-content text-center">
-            <h1>Biglietti non disponibili? Ti avvisiamo noi.</h1>
-            <p>Abbonati a Tixy e ricevi una notifica immediata quando tornano disponibili o scendono di prezzo per l’evento che cerchi.</p>
-            <a href="/abbonati.html" class="theme-btn">
-              <i class="far fa-bell"></i> Attiva gli alert
-            </a>
+    <div class="container">
+      <div class="cta-wrapper">
+        <div class="row align-items-center">
+          <div class="col-lg-7 mx-auto">
+            <div class="cta-content text-center">
+              <h1 style="color: var(--heading-color);">Biglietti non disponibili? Ti avvisiamo noi.</h1>
+              <p>Abbonati a Tixy e ricevi una notifica immediata quando tornano disponibili o scendono di prezzo.</p>
+              <a href="{% url 'attiva_pro' %}" class="theme-btn">
+                <i class="far fa-bell"></i> Attiva gli alert
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 {% endblock %}

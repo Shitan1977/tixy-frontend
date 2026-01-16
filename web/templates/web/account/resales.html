@@ -57,18 +57,19 @@
             {% csrf_token %}
 
             <div class="row g-3">
-              <!-- 1) Evento/performance -->
+              <!-- 1) Evento/performance con autocomplete -->
               <div class="col-12">
-                <label class="form-label">Evento (seleziona una data)</label>
-                <select name="performance" class="form-select" required>
-                  <option value="">— Seleziona —</option>
-                  {% for p in perfs %}
-                    <option value="{{ p.id }}">{{ p.evento }} — {{ p.venue }} — {{ p.when_fmt }}</option>
-                  {% endfor %}
-                </select>
-                {% if not perfs %}
-                  <div class="form-text text-danger">Nessun evento futuro trovato: crea performance nel backend.</div>
-                {% endif %}
+                <label class="form-label">Evento (cerca per nome, artista o città)</label>
+                <input 
+                  type="text" 
+                  id="event-search" 
+                  class="form-control" 
+                  placeholder="Inizia a digitare per cercare..."
+                  autocomplete="off"
+                >
+                <input type="hidden" name="performance" id="performance-id" required>
+                <div id="search-results" class="search-results"></div>
+                <small class="form-text text-muted">Seleziona l'evento dalla lista dei risultati</small>
               </div>
 
               <!-- 2) Quantità -->
@@ -139,9 +140,116 @@
 
 {% block extra_js %}
 <script>
-  (function(){
-    document.querySelectorAll('.nav-account a')
-      .forEach(a => a.classList.toggle('active', a.dataset.route === 'rivendita'));
-  })();
+(function(){
+  // Menu attivo
+  document.querySelectorAll('.nav-account a')
+    .forEach(a => a.classList.toggle('active', a.dataset.route === 'rivendita'));
+
+  // Autocomplete per ricerca eventi
+  const searchInput = document.getElementById('event-search');
+  const hiddenInput = document.getElementById('performance-id');
+  const resultsDiv = document.getElementById('search-results');
+  let debounceTimer;
+
+  if (!searchInput || !hiddenInput || !resultsDiv) {
+    console.error('Elementi autocomplete non trovati');
+    return;
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const query = this.value.trim();
+
+    if (query.length < 2) {
+      resultsDiv.classList.remove('show');
+      hiddenInput.value = '';
+      return;
+    }
+
+    debounceTimer = setTimeout(() => {
+      fetch(`/api/search/performances/?q=${encodeURIComponent(query)}&page_size=10`)
+        .then(res => res.json())
+        .then(data => {
+          const results = data.results || [];
+          
+          if (results.length === 0) {
+            resultsDiv.innerHTML = '<div class="search-no-results">Nessun evento trovato</div>';
+            resultsDiv.classList.add('show');
+            return;
+          }
+
+          resultsDiv.innerHTML = results.map(item => `
+            <div class="search-result-item" data-id="${item.id}" data-name="${escapeHtml(item.evento_nome)}" data-venue="${escapeHtml(item.luogo_nome)}" data-date="${item.starts_at_utc}">
+              <div class="event-title">${escapeHtml(item.evento_nome) || 'Evento'}</div>
+              <div class="event-meta">
+                <i class="far fa-location-dot"></i> ${escapeHtml(item.luogo_nome) || ''} · 
+                <i class="far fa-calendar"></i> ${formatDate(item.starts_at_utc)}
+              </div>
+            </div>
+          `).join('');
+
+          resultsDiv.classList.add('show');
+
+          // Aggiungi evento click a ogni risultato
+          resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              const perfId = this.dataset.id;
+              const eventName = this.dataset.name;
+              const venue = this.dataset.venue;
+              const date = this.dataset.date;
+              
+              // Imposta il valore visibile
+              searchInput.value = `${eventName} - ${venue} - ${formatDate(date)}`;
+              
+              // Imposta l'ID nascosto
+              hiddenInput.value = perfId;
+              
+              // Chiudi i risultati
+              resultsDiv.classList.remove('show');
+              resultsDiv.innerHTML = '';
+              
+              console.log('Selezionato performance ID:', perfId);
+            });
+          });
+        })
+        .catch(err => {
+          console.error('Errore ricerca:', err);
+          resultsDiv.innerHTML = '<div class="search-no-results">Errore durante la ricerca</div>';
+          resultsDiv.classList.add('show');
+        });
+    }, 300);
+  });
+
+  // Chiudi risultati al click fuori
+  document.addEventListener('click', function(e) {
+    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+      resultsDiv.classList.remove('show');
+    }
+  });
+
+  // Formatta data
+  function formatDate(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('it-IT', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Escape HTML per sicurezza
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+})();
 </script>
 {% endblock %}
