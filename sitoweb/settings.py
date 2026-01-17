@@ -25,10 +25,10 @@ SECRET_KEY = "django-insecure-vl7_uxea+si&u=vh-!+vlwwn06+)#w75hq3ej+3d)@(#-1_rpw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["tixy.it", "www.tixy.it"]
 
 # settings.py (frontend) // evutiamo cros
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000/api")
+API_BASE_URL = os.environ.get("API_BASE_URL","https://api.tixy.it/api")
 REQUESTS_TIMEOUT = 6
 # mostrare o meno le altre piattaforme
 SHOW_EXTERNAL_PLATFORMS = False
@@ -120,7 +120,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "web" / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Default primary key field type
