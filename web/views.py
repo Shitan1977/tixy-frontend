@@ -2582,7 +2582,7 @@ def account_profile_view(request):
             if action == "update_profile":
                 first_name = (request.POST.get("first_name") or "").strip()
                 last_name  = (request.POST.get("last_name") or "").strip()
-                phone      = (request.POST.get("phone") or "").strip()
+                phone_number = (request.POST.get("phone_number") or "").strip()
                 marketing  = bool(request.POST.get("marketing_ok"))
 
                 # --- NUOVI CAMPI SOCIAL
@@ -2590,12 +2590,11 @@ def account_profile_view(request):
                 instagram_url = (request.POST.get("instagram_url") or "").strip()
                 tiktok_url    = (request.POST.get("tiktok_url") or "").strip()
                 x_url         = (request.POST.get("x_url") or "").strip()
-                website_url   = (request.POST.get("website_url") or "").strip()
 
                 payload = {
                     "first_name": first_name,
                     "last_name": last_name,
-                    "phone": phone,
+                    "phone_number": phone_number,
                     "marketing_ok": marketing,
 
                     # social (chiavi allineate alle API)
@@ -2603,7 +2602,6 @@ def account_profile_view(request):
                     "instagram_url": instagram_url,
                     "tiktok_url": tiktok_url,
                     "x_url": x_url,
-                    "website_url": website_url,
                 }
 
                 _api_request("PATCH", "profile/", json=payload, token=token, timeout=15)
@@ -2622,7 +2620,7 @@ def account_profile_view(request):
                     return redirect("account_profile")
 
                 _api_request(
-                    "POST", "profile/change_password/",
+                    "POST", "profile/change-password/",
                     json={"old_password": old_pwd, "new_password": new_pwd},
                     token=token, timeout=15
                 )
@@ -2656,7 +2654,7 @@ def account_profile_view(request):
         messages.error(request, f"Impossibile caricare il profilo: {e}")
 
     # Flag visuali per “venditore verificato” (HOME richiede: telefono + almeno 1 social)
-    phone_val = (profilo.get("phone") or "").strip()
+    phone_val = (profilo.get("phone_number") or "").strip()
     has_phone = bool(phone_val)
 
     socials = [
@@ -2664,7 +2662,6 @@ def account_profile_view(request):
         (profilo.get("instagram_url") or "").strip(),
         (profilo.get("tiktok_url") or "").strip(),
         (profilo.get("x_url") or "").strip(),
-        (profilo.get("website_url") or "").strip(),
     ]
     has_any_social = any(bool(s) for s in socials)
     is_verified_visual = has_phone and has_any_social
