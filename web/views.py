@@ -550,6 +550,7 @@ def event_listings(request, perf_id: int):
         "already_following": already_following,
         "following": following,
         "error": error,
+        "evento": {"id": event_id} if event_id else {},
     }
     return render(request, "web/event_listings.html", context)
 

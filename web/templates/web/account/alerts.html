@@ -72,74 +72,46 @@
                     </div>
 
                     <div class="card-body p-0">
-                        {% if page_obj and page_obj.object_list %}
+                        {% if free_alerts %}
                         <div class="table-responsive">
                             <table class="table table-admin align-middle mb-0">
                                 <thead>
                                 <tr>
-                                    <th>Evento / Biglietto</th>
-                                    <th class="text-nowrap">Filtri</th>
+                                    <th>Evento</th>
+                                    <th class="text-nowrap">Tipo</th>
                                     <th class="text-nowrap">Stato</th>
-                                    <th class="text-end text-nowrap">Ultimo controllo</th>
+                                    <th class="text-end text-nowrap">Creato il</th>
                                     <th class="text-end">Azioni</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {% for a in page_obj.object_list %}
+                                {% for a in free_alerts %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-start gap-3">
-                                            {% if a.cover %}
-                                            <img src="{{ a.cover }}" class="rounded" alt="" width="54" height="36"
-                                                 style="object-fit:cover">
-                                            {% endif %}
                                             <div>
                                                 <div class="fw-semibold">{{ a.title }}</div>
-                                                {% if a.event_date %}
-                                                <div class="small text-muted">{{ a.event_date }}</div>
+                                                {% if a.created_at %}
+                                                <div class="small text-muted">Alert creato: {{ a.created_at }}</div>
                                                 {% endif %}
                                             </div>
                                         </div>
                                     </td>
 
                                     <td class="text-nowrap">
-                                        {% if a.filters %}
-                                        <span class="badge badge-soft">{{ a.filters }}</span>
-                                        {% else %}
-                                        <span class="text-muted">—</span>
-                                        {% endif %}
+                                        <span class="badge badge-soft">{{ a.type|upper }}</span>
                                     </td>
 
                                     <td class="text-nowrap">
-                                        {% if a.active %}
-                                        <span class="badge badge-soft success"><span
-                                                class="status-dot"></span> Attivo</span>
-                                        {% else %}
-                                        <span class="badge badge-soft muted"><span class="status-dot pause"></span> In pausa</span>
-                                        {% endif %}
+                                        <span class="badge badge-soft success">
+                                            <span class="status-dot"></span> {{ a.status }}
+                                        </span>
                                     </td>
 
-                                    <td class="text-end text-nowrap">{{ a.last_check|default:"—" }}</td>
+                                    <td class="text-end text-nowrap">{{ a.created_at|default:"—" }}</td>
 
                                     <td class="text-end">
                                         <div class="btn-group">
-                                            {% if a.active %}
-                                            <form method="post" action="{% url 'alert_pause' a.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-warning"
-                                                        title="Metti in pausa">
-                                                    <i class="far fa-pause"></i>
-                                                </button>
-                                            </form>
-                                            {% else %}
-                                            <form method="post" action="{% url 'alert_resume' a.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-success"
-                                                        title="Riprendi">
-                                                    <i class="far fa-play"></i>
-                                                </button>
-                                            </form>
-                                            {% endif %}
                                             <form method="post" action="{% url 'alert_delete' a.id %}" class="d-inline"
                                                   onsubmit="return confirm('Eliminare definitivamente questo alert?');">
                                                 {% csrf_token %}

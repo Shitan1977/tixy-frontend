@@ -21,7 +21,7 @@
           </p>
 
           <form method="post"
-                action="{% url 'attiva_alert' perf.id %}"
+                action="{% url 'attiva_alert' evento.id %}"
                 class="js-one-click d-flex gap-2">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
