@@ -2605,7 +2605,9 @@ def account_profile_view(request):
                     "x_url": x_url,
                 }
 
-                _api_request("PATCH", "profile/", json=payload, token=token, timeout=15)
+                print(f"DEBUG: Payload inviato: {payload}")  # DEBUG
+                resp = _api_request("PATCH", "profile/", json=payload, token=token, timeout=15)
+                print(f"DEBUG: Risposta API: {resp}")  # DEBUG
                 messages.success(request, "Profilo aggiornato ✅")
                 return redirect("account_profile")
 
