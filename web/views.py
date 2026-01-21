@@ -2595,14 +2595,14 @@ def account_profile_view(request):
                 payload = {
                     "first_name": first_name,
                     "last_name": last_name,
-                    "phone_number": phone_number,
+                    "phone_number": phone_number if phone_number else None,
                     "marketing_ok": marketing,
 
-                    # social (chiavi allineate alle API)
-                    "facebook_url": facebook_url,
-                    "instagram_url": instagram_url,
-                    "tiktok_url": tiktok_url,
-                    "x_url": x_url,
+                    # social (chiavi allineate alle API) - invia None se vuoto
+                    "facebook_url": facebook_url if facebook_url else None,
+                    "instagram_url": instagram_url if instagram_url else None,
+                    "tiktok_url": tiktok_url if tiktok_url else None,
+                    "x_url": x_url if x_url else None,
                 }
 
                 print(f"DEBUG: Payload inviato: {payload}")  # DEBUG
