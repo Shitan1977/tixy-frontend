@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
-<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=5">
 {% endblock %}
 
 {% block content %}
@@ -66,7 +66,7 @@
                 <div class="card card-ghost mb-3">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <div>
-                            <h4 class="m-0">Alert gratuiti</h4>
+                            <h4 class="m-0" style="color: var(--heading-color);">Alert gratuiti</h4>
                             <small class="text-muted">Puoi mettere in pausa, riprendere o eliminare un alert.</small>
                         </div>
                     </div>
@@ -90,9 +90,9 @@
                                     <td>
                                         <div class="d-flex align-items-start gap-3">
                                             <div>
-                                                <div class="fw-semibold">{{ a.title }}</div>
+                                                <div class="fw-semibold" style="color: var(--heading-color);">{{ a.title }}</div>
                                                 {% if a.created_at %}
-                                                <div class="small text-muted">Alert creato: {{ a.created_at }}</div>
+                                                <div class="small" style="color: var(--heading-color); opacity: 0.7;">Alert creato: {{ a.created_at }}</div>
                                                 {% endif %}
                                             </div>
                                         </div>

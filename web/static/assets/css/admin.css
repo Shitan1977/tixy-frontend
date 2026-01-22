@@ -230,6 +230,7 @@ body.account .card-ghost{
   border-top: 1px solid var(--border-info-color);
   color: var(--body-text-color);
   padding: 12px; vertical-align: middle;
+  background: var(--theme-bg);
 }
 .account table.table-admin tbody tr:hover{
   background: rgba(117,127,149,.06);
