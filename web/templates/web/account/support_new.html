@@ -20,7 +20,7 @@
       <p class="subtitle m-0 account-hero__subtitle">Assistenza &amp; ticket</p>
     </div>
     <div>
-      <a class="btn btn-light" href="{% url 'account_support_list' %}">
+      <a class="btn btn-danger" href="{% url 'account_support_list' %}">
         <i class="far fa-arrow-left me-2"></i> Torna ai ticket
       </a>
     </div>
@@ -140,8 +140,8 @@
 
               <div class="col-md-4">
                 <label class="form-label">Ordine (opzionale)</label>
-                <input type="number" name="order_id" class="form-control" placeholder="ID ordine se rilevante"
-                       value="{{ form.order_id|default:request.GET.order|default:'' }}">
+                  <input type="number" name="order_id" class="form-control" placeholder="ID ordine se rilevante"
+                    value="{{ form.order_id|default:'' }}">
               </div>
 
               <div class="col-12">
