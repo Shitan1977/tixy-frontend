@@ -1401,7 +1401,17 @@ def events_index(request):
         page = 1
 
     per_page = 21  # <-- quello che vuoi vedere SEMPRE
-    ordering = "starts_at_utc"  # meglio per riempire con future
+    sort = request.GET.get("sort", "date_asc")
+    if sort == "date_asc":
+        ordering = "starts_at_utc"
+    elif sort == "date_desc":
+        ordering = "-starts_at_utc"
+    elif sort == "az":
+        ordering = "evento_nome"
+    elif sort == "za":
+        ordering = "-evento_nome"
+    else:
+        ordering = "starts_at_utc"
 
     now_utc = datetime.now(dt_timezone.utc)
 
@@ -1464,8 +1474,17 @@ def events_index(request):
 
         api_page += 1
 
-    # ordina (coerente)
-    collected.sort(key=lambda x: (x.get("evento_nome") or "").lower())
+    # ordina secondo filtro scelto
+    if sort == "date_asc":
+        collected.sort(key=lambda x: x.get("starts_iso") or "")
+    elif sort == "date_desc":
+        collected.sort(key=lambda x: x.get("starts_iso") or "", reverse=True)
+    elif sort == "az":
+        collected.sort(key=lambda x: (x.get("evento_nome") or "").lower())
+    elif sort == "za":
+        collected.sort(key=lambda x: (x.get("evento_nome") or "").lower(), reverse=True)
+    else:
+        collected.sort(key=lambda x: x.get("starts_iso") or "")
 
     total = len(collected)  # totale “che abbiamo visto” (stima FE)
     start = (page - 1) * per_page

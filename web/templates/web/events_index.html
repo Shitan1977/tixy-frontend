@@ -5,29 +5,54 @@
 {% block content %}
 <main class="main pt-60 pb-80">
   <div class="container">
-    <div class="site-heading-inline mb-3">
-      <h2 class="site-title">Eventi</h2>
-      <div class="text-muted">{{ count }} risultati</div>
+
+    <div class="site-heading-inline mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h2 class="site-title mb-0">Eventi</h2>
+        <div class="text-muted">{{ count }} risultati</div>
+      </div>
+      <div>
+        <form method="get" class="d-flex align-items-center gap-2">
+          <label for="sort-select" class="form-label mb-0 me-2 visually-hidden">Ordina per</label>
+          <select name="sort" id="sort-select" class="form-select form-select-sm" style="min-width: 140px;">
+            <option value="date_asc" {% if request.GET.sort == 'date_asc' %}selected{% endif %}>Data crescente</option>
+            <option value="date_desc" {% if request.GET.sort == 'date_desc' %}selected{% endif %}>Data decrescente</option>
+            <option value="az" {% if request.GET.sort == 'az' %}selected{% endif %}>A-Z</option>
+            <option value="za" {% if request.GET.sort == 'za' %}selected{% endif %}>Z-A</option>
+          </select>
+          <button type="submit" class="btn btn-outline-secondary btn-sm">Filtra</button>
+        </form>
+      </div>
     </div>
 
     {% if items %}
       <div class="row g-4">
         {% for it in items %}
-          <div class="col-12 col-md-6 col-lg-4">
-            <article class="seller-card h-100">
-              <h6 class="mb-1 text-truncate" title="{{ it.evento_nome }}">{{ it.evento_nome }}</h6>
-              <div class="small text-muted mb-2">
-                <i class="far fa-location-dot me-1"></i>{{ it.luogo_nome }}
-                {% if it.starts_fmt %} • <i class="far fa-calendar ms-1 me-1"></i>{{ it.starts_fmt }}{% endif %}
-              </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <!-- IMMAGINE RIMOSSA -->
 
-              <div class="d-flex flex-wrap gap-2">
-                <a class="theme-btn theme-btn-sm" href="{% url 'event-listings' it.perf_id %}">
-                  <i class="far fa-ticket me-1"></i> Vedi biglietti
-                </a>
-              </div>
-            </article>
-          </div>
+                <div class="card-body pt-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <strong class="small text-truncate" title="{{ it.evento_nome }}">
+                            {{ it.evento_nome }}
+                        </strong>
+                    </div>
+
+                    <div class="small text-muted mb-1"><i class="far fa-location-dot me-1"></i>{{ it.luogo_nome }}</div>
+                    {% if it.starts_fmt %}
+                    <div class="small text-muted"><i class="far fa-calendar me-1"></i>{{ it.starts_fmt }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                    <div></div>
+                    <a class="btn btn-sm theme-btn" href="{% url 'event-listings' it.perf_id %}">
+                        <i class="far fa-ticket me-1"></i> Vedi biglietti
+                    </a>
+                </div>
+            </div>
+        </div>
         {% endfor %}
       </div>
 
