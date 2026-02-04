@@ -1180,23 +1180,25 @@ def _get_active_alerts(token: str):
         pass
     
     # Monitoraggi PRO
+
     try:
         data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
         rows = data.get("results", data if isinstance(data, list) else []) or []
+
         for m in rows:
-            ev = (m.get("evento_info") or {})
-            expires_iso = m.get("expires_at") or m.get("data_fine") or ""
             alerts.append({
                 "id": m.get("id"),
-                "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "title": m.get("event_title") or "Evento",
                 "type": "pro",
-                "created_at": _fmt_iso_dmy_hm(m.get("created_at") or ""),
-                "expires_at": _fmt_iso_dmy_hm(expires_iso),
-                "status": _map_sub_status(m),
+                # activated_at = data attivazione del PRO
+                "created_at": _fmt_iso_dmy_hm(m.get("activated_at") or ""),
+                "expires_at": _fmt_iso_dmy_hm(m.get("expires_at") or ""),
+                # status_label già pronto ("Attivo", "Pending", ecc.)
+                "status": m.get("status_label") or m.get("status") or "Attivo",
             })
     except Exception:
         pass
-    
+
     return alerts
 
 
@@ -1845,6 +1847,14 @@ def _map_sub_status(item: dict) -> str:
     it = item or {}
     status_raw = (it.get("status") or it.get("stato") or "").lower().strip()
 
+    # ✅ 1) Se l'API ci passa già un'etichetta "umana", usiamola (my-pro: status_label="Attivo")
+    if it.get("status_label"):
+        return str(it["status_label"])
+
+    # ✅ 2) my-pro flat: status="active"
+    if status_raw in ("active", "attivo"):
+        return "Attivo"
+
     expires = _safe_dt(it.get("expires_at") or it.get("scade_il") or it.get("valid_until"))
     done_at = _safe_dt(it.get("done_at") or it.get("success_at") or it.get("notified_at"))
 
@@ -1884,15 +1894,22 @@ def _api_subscriptions_list(token: str, page: int = 1, per_page: int = 20):
     for r in rows:
         ev = (r.get("evento_info") or r.get("event_info") or {})
         perf = (r.get("performance_info") or {})
-        # attivazione = created_at del monitoraggio (o dell’abbonamento se disponibile)
-        created_iso = r.get("created_at") or r.get("creato_il") or r.get("abbonamento_created_at") or ""
+
+        # NUOVI CAMPI (my-pro "piatto") + fallback ai vecchi
+        title = r.get("event_title") or r.get("title") or ev.get("nome") or ev.get("title") or "Evento"
+        created_iso = r.get("activated_at") or r.get("created_at") or r.get("creato_il") or r.get(
+            "abbonamento_created_at") or ""
         expires_iso = r.get("expires_at") or r.get("scade_il") or r.get("valid_until") or ""
-        event_iso   = (ev.get("starts_at_utc") or ev.get("starts_at")
-                       or perf.get("starts_at_utc") or "")
+        event_iso = (
+                r.get("event_date")  # my-pro flat
+                or ev.get("starts_at_utc") or ev.get("starts_at")
+                or perf.get("starts_at_utc")
+                or ""
+        )
 
         item = {
             "id": r.get("id"),
-            "title": (ev.get("nome") or ev.get("title") or r.get("title") or "Evento"),
+            "title": title,
             "cover": ev.get("cover_url") or None,
 
             # RAW
@@ -1903,11 +1920,12 @@ def _api_subscriptions_list(token: str, page: int = 1, per_page: int = 20):
             # FORMATTATI
             "created_at": _fmt_iso_dmy_hm(created_iso),
             "expires_at": _fmt_iso_dmy_hm(expires_iso),
-            "event_date":  _fmt_iso_dmy_hm(event_iso),
+            "event_date": _fmt_iso_dmy_hm(event_iso),
 
             "status": _map_sub_status(r),
             "period": r.get("period_label") or r.get("durata_label") or "",
         }
+
         items.append(item)
 
     total = int(data.get("count") or len(items))

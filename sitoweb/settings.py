@@ -25,7 +25,9 @@ SECRET_KEY = "django-insecure-vl7_uxea+si&u=vh-!+vlwwn06+)#w75hq3ej+3d)@(#-1_rpw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["tixy.it", "www.tixy.it"]
+
+
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "tixy.it,www.tixy.it,localhost,127.0.0.1").split(",")
 
 # settings.py (frontend) // evutiamo cros
 API_BASE_URL = os.environ.get("API_BASE_URL","https://api.tixy.it/api")

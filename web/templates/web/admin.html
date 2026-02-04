@@ -87,7 +87,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-nowrap">
-                                        {% if a.kind == "pro" %}
+                                       {% if a.type|lower == "pro" %}
                                         <span class="badge badge-soft success">PRO</span>
                                         {% else %}
                                         <span class="badge badge-soft">FREE</span>
