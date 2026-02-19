@@ -934,6 +934,11 @@ def attiva_pro(request):
         event_id = int(request.GET.get("event") or 0)
     except (TypeError, ValueError):
         event_id = 0
+    
+    try:
+        performance_id = int(request.GET.get("performance") or 0)
+    except (TypeError, ValueError):
+        performance_id = 0
 
     if request.method == "POST":
         periodo = request.POST.get("periodo")  # '1m'|'2m'|...|'12m'|'evento'
@@ -951,6 +956,7 @@ def attiva_pro(request):
 
         request.session[PRO_SESSION_KEY] = {
             "event_id": event_id,
+            "performance_id": performance_id,
             "periodo": periodo,
             "giorni": giorni,
             "prezzo": str(prezzo),
@@ -961,6 +967,7 @@ def attiva_pro(request):
 
     ctx = {
         "event_id": event_id,
+        "performance_id": performance_id,
         "prezzo_mese": 6.99,
         "months": list(range(1, 13)),
         "next": request.GET.get("next") or reverse("home"),
@@ -1019,6 +1026,7 @@ def pro_cart(request):
         return redirect("attiva_pro")
 
     event_id = data.get("event_id")
+    performance_id = data.get("performance_id")
     periodo = (data.get("periodo") or "1m").strip().lower()
     giorni = int(data.get("giorni") or 30)
     prezzo = data.get("prezzo")
@@ -1034,6 +1042,7 @@ def pro_cart(request):
     if request.method == "POST":
         request.session[SESSION_PRO_CHECKOUT] = {
             "event_id": event_id,
+            "performance_id": performance_id,
             "periodo": periodo,
             "mesi": mesi,
             "giorni": giorni,
@@ -1045,6 +1054,7 @@ def pro_cart(request):
 
     ctx = {
         "event_id": event_id,
+        "performance_id": performance_id,
         "periodo": periodo,
         "mesi": mesi,
         "giorni": giorni,
@@ -1066,6 +1076,7 @@ def pro_pagamento(request):
         return redirect("home")
 
     event_id = data.get("event_id")
+    performance_id = data.get("performance_id")
     periodo = data.get("periodo")
     mesi = data.get("mesi")
     giorni = int(data.get("giorni") or 30)
@@ -1080,7 +1091,7 @@ def pro_pagamento(request):
                 return redirect(request.path)
 
             abb = api_abbonamento_create(token, prezzo=str(prezzo), durata_giorni=giorni)
-            api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id)
+            api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id, performance_id=performance_id)
 
             request.session.pop(SESSION_PRO_CHECKOUT, None)
             messages.success(request, "✅ Abbonamento PRO attivato! Monitoraggio creato.")
@@ -1451,16 +1462,14 @@ def events_index(request):
 
     now_utc = datetime.now(dt_timezone.utc)
 
-    # vogliamo arrivare ad almeno (page * per_page) items futuri,
-    # così poi facciamo lo slice corretto
-    target = page * per_page
+    # Raccoglie TUTTI gli eventi futuri disponibili per calcolare correttamente il numero di pagine
     collected = []
 
     api_page = 1
-    max_api_pages = 50  # safety
-    api_page_size = 60  # chiediamo un po' di righe per volta
+    max_api_pages = 100  # safety - aumentato per gestire più eventi
+    api_page_size = 100  # chiediamo più righe per volta per essere più efficiente
 
-    while len(collected) < target and api_page <= max_api_pages:
+    while api_page <= max_api_pages:
         data = {}
         try:
             data = search_performances(
