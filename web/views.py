@@ -1090,7 +1090,7 @@ def pro_pagamento(request):
                 messages.error(request, "Pagamento reale non configurato.")
                 return redirect(request.path)
 
-            abb = api_abbonamento_create(token, prezzo=str(prezzo), durata_giorni=giorni)
+            abb = api_abbonamento_create(token, prezzo=str(prezzo), durata_giorni=giorni, periodo=periodo)
             api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id, performance_id=performance_id)
 
             request.session.pop(SESSION_PRO_CHECKOUT, None)
@@ -1185,12 +1185,14 @@ def account_admin(request):
     # === SOLO LETTURA per /account/ ===
     active_alerts = _get_active_alerts(token)          # elenco con scadenza
     free_alerts_count = _get_free_alerts_count(token)  # count gratuiti
+    active_subscriptions_count = _get_active_subscriptions_count(token)  # count abbonamenti attivi
     last_ticket = _get_last_order(token)               # ultimo ordine pagato
 
     ctx = {
         "profilo": profilo,
         "active_alerts": active_alerts,
         "free_alerts_count": free_alerts_count,
+        "active_subscriptions_count": active_subscriptions_count,
         "last_ticket": last_ticket,
     }
     return render(request, "web/admin.html", ctx)
@@ -1285,6 +1287,22 @@ def _get_last_order(token: str):
         }
     except Exception:
         return None
+
+
+def _get_active_subscriptions_count(token: str) -> int:
+    """Conta gli abbonamenti PRO attivi dell'utente."""
+    try:
+        data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        # Conta solo i monitoraggi con status "Attivo"
+        count = 0
+        for m in rows:
+            status = _map_sub_status(m)
+            if status == "Attivo":
+                count += 1
+        return count
+    except Exception:
+        return 0
 
 
 def account_admin(request):

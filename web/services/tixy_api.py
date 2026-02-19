@@ -246,7 +246,7 @@ def api_pro_alert_status(token: str, event_id: int, event_title: str = None) -> 
 
 
 def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: str = "6.99",
-                           durata_giorni: int | None = None):
+                           durata_giorni: int | None = None, periodo: str | None = None):
     """
     Crea un abbonamento (puoi passare plan_id oppure solo prezzo/durata_giorni).
     """
@@ -256,6 +256,9 @@ def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: st
     if durata_giorni is not None:
         # campo custom lato backend (oppure ignorato a seconda dell'implementazione)
         payload["data_fine_days"] = durata_giorni
+    if periodo:
+        # Passa il periodo per tracciamento ('1m', '3m', 'evento', ecc.)
+        payload["periodo"] = periodo
 
     base = settings.API_BASE_URL.rstrip("/")
     url = f"{base}/abbonamenti/"
