@@ -24,7 +24,7 @@ from .services.tixy_api import (
     get_listing, listing_preview, checkout_start, checkout_summary,
     api_event_follow_create, api_abbonamento_create, api_monitoraggio_create,
     api_get_profile, api_obtain_token, api_register_user, api_confirm_otp,
-    api_event_follow_status, api_password_reset_start, api_password_reset_confirm,
+    api_event_follow_status, api_pro_alert_status, api_password_reset_start, api_password_reset_confirm,
     get_top_listings,
     _api_request,  # usato in varie helper/view
 )
@@ -363,37 +363,47 @@ import re
 from datetime import datetime, timezone as dt_timezone
 
 def get_other_dates_by_title(perf: dict, perf_id: int):
+    """
+    Ritorna altre performance dello stesso evento (altre date).
+    Preferisce cercare per evento_id; fallback su titolo.
+    """
+    # Estrai evento_id
+    event_id = (perf.get("evento") or perf.get("event") or perf.get("evento_id")
+                or (perf.get("performance_info") or {}).get("evento")
+                or (perf.get("performance_info") or {}).get("event")
+                or (perf.get("performance_info") or {}).get("evento_id"))
+    
     titolo_raw = (perf.get("evento_nome")
                   or (perf.get("performance_info") or {}).get("evento_nome")
                   or perf.get("title")
                   or "")
     titolo = _norm_title(titolo_raw)
-    if not titolo:
-        return []
 
     city_ref = (perf.get("citta") or perf.get("city") or "").strip().lower()
     now_utc = datetime.now(dt_timezone.utc)
 
-    def _fetch(params):
+    rows = []
+
+    # PREFERENZA: Cerca per evento_id (diretto, preciso)
+    if event_id:
         try:
-            data = _api_request("GET", "search/performances/", params=params) or {}
-        except Exception:
-            return []
-        return (data.get("results", data if isinstance(data, list) else []) or [])
+            data = _api_request("GET", "search/performances/", 
+                              params={"evento_id": event_id, "ordering": "starts_at_utc", "limit": 250}) or {}
+            rows = data.get("results", data if isinstance(data, list) else []) or []
+        except Exception as e:
+            rows = []
 
-    # 🔥 tentativo 1: q (come stavi facendo)
-    rows = _fetch({"q": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
-
-    # 🔥 tentativo 2: molte API Django Filter/Search usano "search"
-    if not rows:
-        rows = _fetch({"search": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
-
-    # 🔥 tentativo 3: alcune usano "query"
-    if not rows:
-        rows = _fetch({"query": titolo_raw, "ordering": "starts_at_utc", "limit": 250})
+    # FALLBACK: Se niente per evento_id, cerca per titolo
+    if not rows and titolo:
+        try:
+            data = _api_request("GET", "search/performances/",
+                              params={"q": titolo_raw, "ordering": "starts_at_utc", "limit": 250}) or {}
+            rows = data.get("results", data if isinstance(data, list) else []) or []
+        except Exception as e:
+            pass
 
     out = []
-    for p in rows:
+    for idx, p in enumerate(rows):
         if not isinstance(p, dict):
             continue
 
@@ -402,10 +412,12 @@ def get_other_dates_by_title(perf: dict, perf_id: int):
         if not pid or str(pid) == str(perf_id):
             continue
 
-        # titolo da pp oppure p
-        t_raw = (pp.get("evento_nome") or p.get("evento_nome") or pp.get("title") or p.get("title") or "")
-        if _norm_title(t_raw) != titolo:
-            continue
+        # Se cercavamo per titolo (fallback), verifica match
+        if not event_id and titolo:
+            t_raw = (pp.get("evento_nome") or p.get("evento_nome") or pp.get("title") or p.get("title") or "")
+            t_norm = _norm_title(t_raw)
+            if t_norm != titolo:
+                continue
 
         # date da pp oppure p
         iso = (pp.get("starts_at_utc") or p.get("starts_at_utc") or
@@ -413,7 +425,7 @@ def get_other_dates_by_title(perf: dict, perf_id: int):
         if not iso:
             continue
 
-        # solo future (ma NON scartare se parsing fallisce: meglio tenerla che "sparire")
+        # solo future
         dt_ok = True
         try:
             dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
@@ -422,7 +434,6 @@ def get_other_dates_by_title(perf: dict, perf_id: int):
             if dt < now_utc:
                 dt_ok = False
         except Exception:
-            # NON scartiamo: se l'API manda un formato strano, almeno la vediamo
             dt_ok = True
 
         if not dt_ok:
@@ -433,7 +444,18 @@ def get_other_dates_by_title(perf: dict, perf_id: int):
         if city_ref and city and city != city_ref:
             continue
 
-        out.append(pp)
+        # Estrai venue
+        venue = (pp.get("luogo_nome") or p.get("luogo_nome") or pp.get("venue") or p.get("venue") or "").strip()
+        
+        # Costruisci dizionario come richiesto dal template
+        out.append({
+            "id": int(pid),
+            "starts_iso": iso,
+            "starts_fmt": _fmt_iso_dmy_hm(iso),
+            "city": city or None,
+            "venue": venue or None,
+            "prezzo_min": pp.get("prezzo_min") or p.get("prezzo_min"),
+        })
 
     out.sort(key=lambda x: x.get("starts_at_utc") or x.get("starts_at") or "")
     return out
@@ -441,9 +463,11 @@ def get_other_dates_by_title(perf: dict, perf_id: int):
 
 
 
+
 def event_listings(request, perf_id: int):
     perf, listings, external_platforms, error = None, [], [], None
     already_following = False
+    already_following_pro = False
     has_external = False
 
     dates = []
@@ -487,9 +511,6 @@ def event_listings(request, perf_id: int):
                 "venue": (d.get("luogo_nome") or d.get("venue") or "").strip() or None,
                 "prezzo_min": d.get("prezzo_min"),
             })
-        import sys
-        sys.stderr.write(f"DEBUG altre-date by-title found={len(dates)} ids={[d['id'] for d in dates]}\n")
-        sys.stderr.flush()
 
         norm.sort(key=lambda x: x["starts_iso"] or "")
         dates = norm
@@ -523,9 +544,15 @@ def event_listings(request, perf_id: int):
         try:
             token = request.session.get(SESSION_TOKEN_KEY)
             if token and event_id:
+                # Estrai il titolo dell'evento per il confronto
+                event_title = (perf.get("evento_nome") 
+                             or (perf.get("performance_info") or {}).get("evento_nome") 
+                             or "")
                 already_following = api_event_follow_status(token, int(event_id))
-        except Exception:
+                already_following_pro = api_pro_alert_status(token, int(event_id), event_title)
+        except Exception as exc:
             already_following = False
+            already_following_pro = False
 
     except Exception as e:
         error = str(e)
@@ -534,7 +561,11 @@ def event_listings(request, perf_id: int):
     show_alert_cta = not has_tixy
 
     alert_param = (request.GET.get("alert") or "").lower()
+    pro_param = (request.GET.get("pro") or "").lower()
     following = bool(already_following or alert_param == "ok")
+    
+    # Se ha QUALSIASI abbonamento (gratuito O PRO), non può attivarne altri
+    has_any_subscription = bool(already_following or already_following_pro)
 
     context = {
         "perf": perf or {},
@@ -548,7 +579,10 @@ def event_listings(request, perf_id: int):
         "has_external": has_external,
         "show_alert_cta": show_alert_cta,
         "already_following": already_following,
+        "already_following_pro": already_following_pro,
+        "has_any_subscription": has_any_subscription,
         "following": following,
+        "pro_ok": pro_param == "ok",
         "error": error,
         "evento": {"id": event_id} if event_id else {},
     }

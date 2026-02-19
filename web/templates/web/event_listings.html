@@ -192,7 +192,7 @@
 
   {% else %}
     <!-- ALERTS (GRATUITO + PRO) -->
-    {% include "web/partials/event_alerts.html" with perf=perf following=following %}
+    {% include "web/partials/event_alerts.html" with perf=perf evento=evento following=following pro_ok=pro_ok already_following_pro=already_following_pro has_any_subscription=has_any_subscription %}
   {% endif %}
 
 

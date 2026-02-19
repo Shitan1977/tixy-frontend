@@ -25,11 +25,15 @@
                 class="js-one-click d-flex gap-2">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
-            <button type="submit" class="theme-btn" {% if following %}disabled{% endif %}>
-              {% if following %}Notifiche attive ✓{% else %}
+            {% if following %}
+              <button type="button" class="theme-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
+                Notifiche attive ✓
+              </button>
+            {% else %}
+              <button type="submit" class="theme-btn">
                 <i class="fa-regular fa-bell"></i> Attiva notifiche
-              {% endif %}
-            </button>
+              </button>
+            {% endif %}
           </form>
         </div>
       </div>
@@ -41,13 +45,24 @@
             <i class="fa-solid fa-crown"></i>
             <h4 class="m-0">Alert PRO</h4>
           </div>
+
+          {% if pro_ok %}
+            <div class="alert alert-success mb-3">Alert PRO attivato per questo evento ✓</div>
+          {% endif %}
+
           <p class="text-muted mb-3">
             Monitoraggio più frequente. (Da € 6,99)
           </p>
-          <a class="theme-btn w-100"
-             href="{% url 'attiva_pro' %}?event={{ perf.id }}&next={{ request.get_full_path|urlencode }}">
-            Attiva PRO
-          </a>
+          {% if already_following_pro %}
+            <button type="button" class="theme-btn w-100" disabled style="opacity: 0.6; cursor: not-allowed;">
+              Alert PRO attivo ✓
+            </button>
+          {% else %}
+            <a class="theme-btn w-100"
+               href="{% url 'attiva_pro' %}?event={{ evento.id }}&next={{ request.get_full_path|urlencode }}">
+              Attiva PRO
+            </a>
+          {% endif %}
         </div>
       </div>
 

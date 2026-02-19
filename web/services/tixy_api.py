@@ -179,20 +179,70 @@ def api_event_follow_create(token: str, event_id: int):
 
 
 def api_event_follow_status(token: str, event_id: int) -> bool:
+    """
+    Verifica se l'utente ha un alert gratuito per un evento.
+    """
     base = settings.API_BASE_URL.rstrip("/")
     url = f"{base}/event-follows/"
-    r = requests.get(
-        url,
-        params={"event": event_id},
-        headers=_auth_headers(token),
-        timeout=_timeout(),
-    )
-    if r.status_code == 401:
+    try:
+        r = requests.get(
+            url,
+            params={"event": event_id},
+            headers=_auth_headers(token),
+            timeout=_timeout(),
+        )
+        if r.status_code == 401:
+            return False
+        r.raise_for_status()
+        data = r.json()
+        items = data.get("results", data if isinstance(data, list) else [])
+        return bool(items)
+    except Exception as e:
         return False
-    r.raise_for_status()
-    data = r.json()
-    items = data.get("results", data if isinstance(data, list) else [])
-    return bool(items)
+
+
+def api_pro_alert_status(token: str, event_id: int, event_title: str = None) -> bool:
+    """
+    Verifica se l'utente ha già un abbonamento PRO attivo per un evento.
+    Controlla i monitoraggi legati ad abbonamenti PRO.
+    Confronta per event_id e, se non trova match, anche per event_title.
+    """
+    base = settings.API_BASE_URL.rstrip("/")
+    url = f"{base}/monitoraggi/my-pro/"
+    try:
+        r = requests.get(
+            url,
+            params={"page": 1, "page_size": 100},
+            headers=_auth_headers(token),
+            timeout=_timeout(),
+        )
+        if r.status_code == 401:
+            return False
+        r.raise_for_status()
+        data = r.json()
+        items = data.get("results", data if isinstance(data, list) else [])
+        
+        # Normalizza il titolo per confronto case-insensitive
+        event_title_norm = event_title.strip().upper() if event_title else None
+        
+        # Cerca se c'è un monitoraggio per questo evento
+        for item in items:
+            item_event_id = item.get("event_id")
+            item_event_title = item.get("event_title")
+            
+            # Match per event_id
+            if item_event_id and item_event_id == event_id:
+                return True
+            
+            # Fallback: match per event_title
+            if event_title_norm and item_event_title:
+                item_title_norm = item_event_title.strip().upper()
+                if item_title_norm == event_title_norm:
+                    return True
+        
+        return False
+    except Exception as e:
+        return False
 
 
 def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: str = "6.99",
