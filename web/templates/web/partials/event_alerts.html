@@ -59,7 +59,7 @@
             </button>
           {% else %}
             <a class="theme-btn w-100"
-               href="{% url 'attiva_pro' %}?event={{ evento.id }}&next={{ request.get_full_path|urlencode }}">
+               href="{% url 'attiva_pro' %}?event={{ evento.id }}{% if perf.id %}&performance={{ perf.id }}{% endif %}&next={{ request.get_full_path|urlencode }}">
               Attiva PRO
             </a>
           {% endif %}

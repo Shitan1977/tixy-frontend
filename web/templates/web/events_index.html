@@ -56,13 +56,11 @@
         {% endfor %}
       </div>
 
-      {% if pages > 1 %}
       <nav class="mt-4 d-flex justify-content-between align-items-center">
         <a class="btn btn-outline-secondary {% if not has_prev %}disabled{% endif %}" href="?page={{ prev_page }}">« Precedente</a>
-        <span class="text-muted">Pagina {{ page }} / {{ pages }}</span>
+        <span class="text-muted">Pagina {{ page }} di {{ pages }}</span>
         <a class="btn btn-outline-secondary {% if not has_next %}disabled{% endif %}" href="?page={{ next_page }}">Successiva »</a>
       </nav>
-      {% endif %}
     {% else %}
       <p class="text-muted">Nessun evento attivo trovato.</p>
     {% endif %}
