@@ -2764,12 +2764,23 @@ def account_alerts_view(request):
         rows = data.get("results", data if isinstance(data, list) else []) or []
         for ef in rows:
             ev = (ef.get("evento_info") or {})
+            # Estrai la data dell'evento dalle performances
+            performances = ev.get("performances", []) or []
+            event_date = None
+            if performances:
+                # Prendi la prima performance
+                first_perf = performances[0]
+                starts_at = first_perf.get("starts_at_utc") or first_perf.get("data_inizio")
+                if starts_at:
+                    event_date = _fmt_iso_dmy_hm(starts_at)
+            
             free_alerts.append({
                 "id": ef.get("id"),
                 "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "event_date": event_date,
                 "type": "free",
                 "created_at": _fmt_iso_dmy_hm(ef.get("created_at") or ""),
-                "expires_at": None,
+                "expires_at": "Illimitato",  # Gli alert gratuiti non scadono
                 "status": "Attivo",
             })
     except Exception:
@@ -2783,10 +2794,18 @@ def account_alerts_view(request):
         for m in rows:
             ev = (m.get("evento_info") or {})
             perf = (m.get("performance_info") or {})
+            
+            # Estrai la data dell'evento
+            event_date = None
+            starts_at = perf.get("starts_at_utc") or perf.get("data_inizio")
+            if starts_at:
+                event_date = _fmt_iso_dmy_hm(starts_at)
+            
             expires_iso = m.get("expires_at") or m.get("data_fine") or ""
             pro_alerts.append({
                 "id": m.get("id"),
                 "title": ev.get("nome_evento") or ev.get("nome") or "Evento",
+                "event_date": event_date,
                 "type": "pro",
                 "created_at": _fmt_iso_dmy_hm(m.get("created_at") or ""),
                 "expires_at": _fmt_iso_dmy_hm(expires_iso),

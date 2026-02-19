@@ -78,9 +78,11 @@
                                 <thead>
                                 <tr>
                                     <th>Evento</th>
+                                    <th class="text-nowrap">Data Evento</th>
                                     <th class="text-nowrap">Tipo</th>
                                     <th class="text-nowrap">Stato</th>
-                                    <th class="text-end text-nowrap">Creato il</th>
+                                    <th class="text-nowrap">Attivazione</th>
+                                    <th class="text-nowrap">Scadenza</th>
                                     <th class="text-end">Azioni</th>
                                 </tr>
                                 </thead>
@@ -90,12 +92,16 @@
                                     <td>
                                         <div class="d-flex align-items-start gap-3">
                                             <div>
-                                                <div class="fw-semibold" style="color: var(--heading-color);">{{ a.title }}</div>
-                                                {% if a.created_at %}
-                                                <div class="small" style="color: var(--heading-color); opacity: 0.7;">Alert creato: {{ a.created_at }}</div>
+                                                <div class="fw-semibold" style="color: var(--heading-color);">{{ a.title|default:"—" }}</div>
+                                                {% if a.event_date %}
+                                                <div class="small text-muted">{{ a.event_date }}</div>
                                                 {% endif %}
                                             </div>
                                         </div>
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        {{ a.event_date|default:"—" }}
                                     </td>
 
                                     <td class="text-nowrap">
@@ -104,11 +110,15 @@
 
                                     <td class="text-nowrap">
                                         <span class="badge badge-soft success">
-                                            <span class="status-dot"></span> {{ a.status }}
+                                            <span class="status-dot"></span> {{ a.status|default:"—" }}
                                         </span>
                                     </td>
 
-                                    <td class="text-end text-nowrap">{{ a.created_at|default:"—" }}</td>
+                                    <td class="text-nowrap">{{ a.created_at|default:"—" }}</td>
+
+                                    <td class="text-nowrap">{{ a.expires_at|default:"—" }}</td>
+
+                                    <td class="text-nowrap">{{ a.expires_at|default:"—" }}</td>
 
                                     <td class="text-end">
                                         <div class="btn-group">
