@@ -153,6 +153,18 @@ def api_get_profile(token: str):
 
 
 # ---------------------------
+# ALERT PLANS
+# ---------------------------
+
+def get_alert_plans():
+    """
+    Recupera tutti i piani alert disponibili.
+    Endpoint pubblico, non richiede autenticazione.
+    """
+    return _api_get("alert-plans/")
+
+
+# ---------------------------
 # EVENT FOLLOW / PRO
 # ---------------------------
 

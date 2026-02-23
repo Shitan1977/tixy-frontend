@@ -34,6 +34,7 @@
 
                 <div class="collapse navbar-collapse" id="main_nav">
                     <ul class="navbar-nav mx-auto">
+
                         <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'rivendita' %}">Rivendita</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'funziona' %}">Come funziona</a></li>
@@ -41,6 +42,26 @@
                         <li class="nav-item"><a class="nav-link" href="{% url 'faq' %}">FAQ</a></li>
 
                     </ul>
+
+                    <div class="d-lg-none mt-3 px-3 pb-3">
+                        {% if request.session.api_access %}
+                        <div class="d-flex flex-column gap-2">
+                            <a href="{% url 'account_admin' %}" class="theme-btn theme-btn2 w-100 text-center">
+                                <i class="far fa-user-circle"></i> Area riservata
+                            </a>
+                            <form action="{% url 'logout' %}" method="post" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="theme-btn w-100">
+                                    <i class="far fa-sign-out"></i> Esci
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'login' %}" class="theme-btn w-100 text-center">
+                            <i class="far fa-sign-in"></i> Accedi
+                        </a>
+                        {% endif %}
+                    </div>
 
                     <div class="nav-right d-flex align-items-center gap-2">
                         <div class="nav-search-wrap d-none d-lg-block">

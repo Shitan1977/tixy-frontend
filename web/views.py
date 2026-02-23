@@ -25,7 +25,7 @@ from .services.tixy_api import (
     api_event_follow_create, api_abbonamento_create, api_monitoraggio_create,
     api_get_profile, api_obtain_token, api_register_user, api_confirm_otp,
     api_event_follow_status, api_pro_alert_status, api_password_reset_start, api_password_reset_confirm,
-    get_top_listings,
+    get_top_listings, get_alert_plans,
     _api_request,  # usato in varie helper/view
 )
 
@@ -923,7 +923,7 @@ def order_confirmed_view(request, order_id: int):
 # =========================
 def attiva_pro(request):
     """
-    GET: mostra selezione mesi (attiva_pro.html)
+    GET: mostra selezione piani AlertPlan (attiva_pro.html)
     POST: valida la scelta e manda al carrello (pro_cart) salvando in sessione
     """
     guard = _require_api_login(request, next_url=request.get_full_path())
@@ -941,35 +941,71 @@ def attiva_pro(request):
         performance_id = 0
 
     if request.method == "POST":
-        periodo = request.POST.get("periodo")  # '1m'|'2m'|...|'12m'|'evento'
-        if periodo == "evento":
-            months = None
-            giorni = 60
-            prezzo = 6.99
-        else:
-            try:
-                months = int(periodo.replace("m", "")) if periodo else 1
-            except Exception:
-                months = 1
-            giorni = 30 * months
-            prezzo = round(6.99 * months, 2)
+        plan_id = request.POST.get("plan_id")
+        
+        if not plan_id:
+            messages.error(request, "Seleziona un piano.")
+            return redirect(reverse("attiva_pro") + f"?event={event_id}" if event_id else "")
+        
+        try:
+            # Recupera il piano per ottenere i dettagli
+            alert_plans_data = get_alert_plans()
+            plans = alert_plans_data.get("results", alert_plans_data) if isinstance(alert_plans_data, dict) else alert_plans_data
+            
+            selected_plan = None
+            for plan in plans:
+                if str(plan.get("id")) == str(plan_id):
+                    selected_plan = plan
+                    break
+            
+            if not selected_plan:
+                messages.error(request, "Piano non valido.")
+                return redirect(reverse("attiva_pro") + f"?event={event_id}" if event_id else "")
+            
+            giorni = selected_plan.get("duration_days", 30)
+            prezzo = str(selected_plan.get("price", "6.99"))
+            
+            request.session[PRO_SESSION_KEY] = {
+                "event_id": event_id,
+                "performance_id": performance_id,
+                "plan_id": plan_id,
+                "plan_name": selected_plan.get("name", ""),
+                "giorni": giorni,
+                "prezzo": prezzo,
+                "next": request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home"),
+            }
+            request.session.modified = True
+            return redirect(reverse("pro_cart"))
+            
+        except Exception as e:
+            messages.error(request, f"Errore durante il caricamento del piano: {e}")
+            return redirect(reverse("attiva_pro") + f"?event={event_id}" if event_id else "")
 
-        request.session[PRO_SESSION_KEY] = {
-            "event_id": event_id,
-            "performance_id": performance_id,
-            "periodo": periodo,
-            "giorni": giorni,
-            "prezzo": str(prezzo),
-            "next": request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home"),
-        }
-        request.session.modified = True
-        return redirect(reverse("pro_cart"))
+    # GET - recupera i piani alert dall'API
+    try:
+        alert_plans_data = get_alert_plans()
+        
+        if alert_plans_data is None:
+            messages.warning(request, "La risposta dell'API è vuota. Verifica che il backend sia attivo.")
+            alert_plans = []
+        elif isinstance(alert_plans_data, dict):
+            # Può essere paginated con "results" o non paginated
+            alert_plans = alert_plans_data.get("results", [])
+            if not alert_plans and alert_plans_data:
+                # Se non c'è "results" ma ci sono dati, probabilmente è un singolo oggetto o lista diretta
+                alert_plans = [alert_plans_data] if alert_plans_data else []
+        elif isinstance(alert_plans_data, list):
+            alert_plans = alert_plans_data
+        else:
+            alert_plans = []
+    except Exception as e:
+        messages.error(request, f"Impossibile caricare i piani disponibili: {e}")
+        alert_plans = []
 
     ctx = {
         "event_id": event_id,
         "performance_id": performance_id,
-        "prezzo_mese": 6.99,
-        "months": list(range(1, 13)),
+        "alert_plans": alert_plans,
         "next": request.GET.get("next") or reverse("home"),
     }
     return render(request, "web/attiva_pro.html", ctx)

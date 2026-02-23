@@ -35,52 +35,58 @@
             <div class="mt-2"><span class="badge rounded-pill bg-info text-dark">Evento selezionato: #{{ event_id }}</span></div>
           {% endif %}
         </div>
-        <div class="text-end">
-          <small class="d-block text-muted">da</small>
-          <div class="display-6">€ {{ prezzo_mese|default:6.99 }}</div>
-          <small class="text-muted">al mese</small>
-        </div>
       </div>
     </div>
 
-    <!-- Scelta piano (tuo form, compatibile con la view) -->
+    <!-- Scelta piano -->
     <div class="seller-card p-4">
-      <h4 class="mb-1">Attiva PRO{% if event_id %} per evento #{{ event_id }}{% endif %}</h4>
-      <p class="text-muted mb-3">Scegli la durata. Prezzo base: € {{ prezzo_mese|default:6.99 }} / mese.</p>
+      <h4 class="mb-1">Scegli il tuo piano PRO{% if event_id %} per evento #{{ event_id }}{% endif %}</h4>
+      <p class="text-muted mb-3">Seleziona il piano più adatto alle tue esigenze.</p>
 
       <form method="post" id="proForm" class="row g-3">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next|default:'' }}">
 
         <div class="col-12">
-          <div class="seller-card p-3">
-            <div class="row g-2">
-              {% for m in months %}
-              <div class="col-6 col-md-3">
-                <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
-                  <input class="form-check-input me-1" type="radio" name="periodo" value="{{ m }}m" {% if forloop.first %}checked{% endif %}>
-                  <strong>{{ m }} {% if m == 1 %}mese{% else %}mesi{% endif %}</strong><br>
-                  <small class="text-muted js-price" data-months="{{ m }}" data-base="{{ prezzo_mese|default:6.99 }}">€ —</small>
+          {% if alert_plans %}
+            <div class="row g-3">
+              {% for plan in alert_plans %}
+              <div class="col-12 col-lg-3">
+                <label class="seller-card p-3 d-flex flex-column align-items-start h-100" style="cursor:pointer; transition: all 0.3s;">
+                  <div class="d-flex align-items-center mb-2 w-100">
+                    <input class="form-check-input me-2" type="radio" name="plan_id" value="{{ plan.id }}" 
+                           {% if forloop.first %}checked{% endif %}>
+                    <strong class="fs-6">{{ plan.name }}</strong>
+                  </div>
+                  <div class="text-muted small mb-2">
+                    <i class="far fa-clock me-1"></i> {{ plan.duration_days }} giorni
+                  </div>
+                  {% if plan.description %}
+                    <p class="small text-muted mb-2 flex-grow-1">{{ plan.description }}</p>
+                  {% endif %}
+                  <div class="w-100 pt-2 mt-auto border-top">
+                    <strong class="fs-5 text-primary d-block">{{ plan.price }} {{ plan.currency }}</strong>
+                  </div>
                 </label>
               </div>
               {% endfor %}
-              <div class="col-12 col-md-3">
-                <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
-                  <input class="form-check-input me-1" type="radio" name="periodo" value="evento">
-                  <strong>Fino a fine evento</strong><br>
-                  <small class="text-muted">Durata standard 60 giorni • € {{ prezzo_mese|default:6.99 }}</small>
-                </label>
-              </div>
             </div>
-          </div>
+          {% else %}
+            <div class="alert alert-warning">
+              <i class="far fa-exclamation-triangle me-2"></i>
+              Nessun piano disponibile al momento. Riprova più tardi.
+            </div>
+          {% endif %}
         </div>
 
+        {% if alert_plans %}
         <div class="col-12 d-flex gap-2">
           <button type="submit" class="theme-btn" id="btnPro">
             <i class="fa-solid fa-crown"></i> Continua
           </button>
           <a class="btn btn-outline-secondary" href="{{ next|default:'/' }}">Annulla</a>
         </div>
+        {% endif %}
       </form>
     </div>
 
@@ -90,7 +96,7 @@
         <div class="seller-card p-4 h-100">
           <h5 class="mb-2">Come funziona</h5>
           <ol class="m-0 ps-3 text-muted">
-            <li class="mb-1">Seleziona la durata (1–12 mesi o fino a fine evento)</li>
+            <li class="mb-1">Seleziona il piano più adatto</li>
             <li class="mb-1">Conferma il pagamento</li>
             <li class="mb-0">Ti avvisiamo appena troviamo biglietti o cali di prezzo</li>
           </ol>
@@ -111,17 +117,11 @@
 
 <script>
 (function(){
-  // calcolo prezzi 1–12 mesi
-  document.querySelectorAll('.js-price').forEach(function(el){
-    var b = parseFloat(el.dataset.base || '6.99');
-    var m = parseInt(el.dataset.months || '1', 10);
-    if (!isNaN(b) && !isNaN(m)) el.textContent = '€ ' + (b * m).toFixed(2);
-  });
   // evita doppi invii
   var form = document.getElementById('proForm');
   if (form) form.addEventListener('submit', function(){
     var btn = document.getElementById('btnPro');
-    if (btn && !btn.disabled){ btn.disabled = true; btn.innerHTML = 'Attivazione...'; }
+    if (btn && !btn.disabled){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Attivazione...'; }
   });
 })();
 </script>
