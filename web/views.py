@@ -1424,7 +1424,49 @@ def top(request):
         except Exception:
             rows = []
 
-    # C) fallback FE: filtro client-side
+    # C) fallback temporaneo: usa performances se non ci sono listing
+    if not rows:
+        try:
+            resp = requests.get(
+                f"{base}/search/performances/",
+                params={"limit": per_page, "page": page, "ordering": "starts_at_utc"},
+                timeout=8,
+            )
+            resp.raise_for_status()
+            perf_data = resp.json() or {}
+            perf_rows = perf_data.get("results", perf_data if isinstance(perf_data, list) else []) or []
+
+            synthetic_rows = []
+            for p in perf_rows:
+                if not isinstance(p, dict):
+                    continue
+                synthetic_rows.append({
+                    "id": f"perf-{p.get('id')}",
+                    "performance_info": {
+                        "id": p.get("id"),
+                        "evento_nome": p.get("evento_nome") or "Evento",
+                        "luogo_nome": p.get("luogo_nome") or "",
+                        "starts_at_utc": p.get("starts_at_utc") or "",
+                    },
+                    "seller_info": {
+                        "first_name": "Tixy",
+                        "last_name": "Network",
+                    },
+                    "qty": 1,
+                    "price_each": p.get("prezzo_min") or p.get("prezzo_max") or 0,
+                    "delivery_method": "digitale",
+                    "is_top": True,
+                })
+
+            rows = synthetic_rows
+            data = {
+                "count": int(perf_data.get("count") or len(rows)),
+                "results": rows,
+            }
+        except Exception:
+            rows = []
+
+    # D) fallback FE: filtro client-side
     def _is_top(it):
         it = it or {}
         return bool(
