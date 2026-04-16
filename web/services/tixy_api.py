@@ -21,24 +21,46 @@ def _timeout() -> int:
     return getattr(settings, "REQUESTS_TIMEOUT", 8)
 
 
+def _effective_api_base_url() -> str:
+    base = (getattr(settings, "API_BASE_URL", "") or "").rstrip("/")
+    debug = bool(getattr(settings, "DEBUG", False))
+    if not base:
+        return "http://127.0.0.1:8000/api"
+    if debug and (
+        "api.tixy.it" in base
+        or base.startswith("http://127.0.0.1:8001/")
+        or base.startswith("http://localhost:8001/")
+    ):
+        return "http://127.0.0.1:8000/api"
+    return base
+
+
 def _api_request(method: str, path: str, *, params: dict | None = None,
-                 json: dict | None = None, token: str | None = None,
+                 json: dict | None = None, data: dict | None = None,
+                 files: dict | None = None, token: str | None = None,
                  timeout: int | None = None):
     """Richiesta HTTP generica con gestione base del Bearer Token."""
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/{path.lstrip('/')}"
     headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    r = requests.request(
-        method=method,
-        url=url,
-        params=params or {},
-        json=json or {},
-        headers=headers,
-        timeout=timeout or _timeout(),
-    )
+    request_kwargs = {
+        "method": method,
+        "url": url,
+        "params": params or {},
+        "headers": headers,
+        "timeout": timeout or _timeout(),
+    }
+    if json is not None:
+        request_kwargs["json"] = json
+    if data is not None:
+        request_kwargs["data"] = data
+    if files is not None:
+        request_kwargs["files"] = files
+
+    r = requests.request(**request_kwargs)
     try:
         r.raise_for_status()
     except requests.HTTPError as e:
@@ -173,7 +195,7 @@ def api_event_follow_create(token: str, event_id: int):
     Attiva le notifiche per un evento.
     In caso di vincolo unique/già attivo, ritorna {"detail": "already-following"}.
     """
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/event-follows/"
     payload = {"event": event_id}
     r = requests.post(
@@ -194,7 +216,7 @@ def api_event_follow_status(token: str, event_id: int) -> bool:
     """
     Verifica se l'utente ha un alert gratuito per un evento.
     """
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/event-follows/"
     try:
         r = requests.get(
@@ -219,7 +241,7 @@ def api_pro_alert_status(token: str, event_id: int, event_title: str = None) -> 
     Controlla i monitoraggi legati ad abbonamenti PRO.
     Confronta per event_id e, se non trova match, anche per event_title.
     """
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/monitoraggi/my-pro/"
     try:
         r = requests.get(
@@ -272,7 +294,7 @@ def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: st
         # Passa il periodo per tracciamento ('1m', '3m', 'evento', ecc.)
         payload["periodo"] = periodo
 
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/abbonamenti/"
     r = requests.post(
         url,
@@ -298,7 +320,7 @@ def api_monitoraggio_create(token: str, *, abbonamento_id: int,
     if filters:
         payload["filters_json"] = filters
 
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/monitoraggi/"
     r = requests.post(
         url,
@@ -342,7 +364,7 @@ def get_sellers_list(limit: int = 40, offset: int = 0, ordering: str | None = "-
     e costruisce la lista aggregata dei venditori.
     Ritorna sempre {"count": int, "results": list}.
     """
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
 
     # 1) Endpoint nativo (se esiste)
     try:
@@ -499,7 +521,7 @@ def api_order_download_stream(token: str, order_id: int, timeout: int | None = N
         r.raise_for_status()
         bytes_pdf = r.content
     """
-    base = settings.API_BASE_URL.rstrip("/")
+    base = _effective_api_base_url()
     url = f"{base}/orders/{order_id}/download/"
     r = requests.get(
         url,

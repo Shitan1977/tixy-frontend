@@ -30,113 +30,183 @@
       <div class="col-lg-10 mx-auto">
         <div class="card card-ghost mb-3">
           <div class="card-header">
-            <h4 class="m-0">Riepilogo caricamento</h4>
-            <small class="text-muted">Controlla i singoli biglietti rilevati e seleziona quelli da mettere in vendita.</small>
+            <h4 class="m-0">Creazione rivendita</h4>
+            <small class="text-muted">
+              {% if step == 'pricing' %}
+                Seleziona il prezzo di vendita.
+              {% elif step == 'recap' %}
+                Controlla il recap finale prima di mettere in vendita.
+              {% else %}
+                Controlla i biglietti trovati e seleziona quelli da vendere.
+              {% endif %}
+            </small>
           </div>
           <div class="card-body">
+            {% if messages %}
+              <div class="mb-3">
+                {% for m in messages %}
+                  <div class="alert alert-{{ m.tags|default:'info' }} mb-2">{{ m }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             {% if not subitems %}
               <div class="p-3 text-center text-muted">
                 Analisi in corso… <a href="" onclick="location.reload(); return false;">Aggiorna</a>
               </div>
             {% else %}
-              <form method="post" class="row g-3">
-                {% csrf_token %}
+              {% if step == 'pricing' %}
+                <form method="post" class="row g-3">
+                  {% csrf_token %}
+                  <input type="hidden" name="step" value="pricing">
+                  {% for sid in selected_ids %}
+                    <input type="hidden" name="subitem_ids" value="{{ sid }}">
+                  {% endfor %}
 
-                <div class="col-12">
-                  <div class="table-responsive">
-                    <table class="table table-admin align-middle mb-0">
-                      <thead>
-                        <tr>
-                          <th style="width:36px">
-                            <input type="checkbox" id="chk-all">
-                          </th>
-                          <th>Intestatario</th>
-                          <th class="text-nowrap">QR/Sigillo</th>
-                          <th class="text-nowrap">Posto</th>
-                          <th class="text-nowrap">Pagina</th>
-                          <th>Note</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for s in subitems %}
+                  <div class="col-12">
+                    <div class="alert alert-light border mb-0">
+                      Hai selezionato {{ selected_items|length }} biglietti. Se disponibile, il prezzo massimo di vendita e quello del biglietto.
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Prezzo di vendita per biglietto</label>
+                    <div class="input-group">
+                      <span class="input-group-text">€</span>
+                      <input type="number" name="price_each" class="form-control" step="0.01" min="0.01" {% if max_allowed_price %}max="{{ max_allowed_price }}"{% endif %} value="{{ price_each|default:max_allowed_price }}" required>
+                    </div>
+                    {% if max_allowed_price %}<small class="text-muted">Prezzo massimo consentito: € {{ max_allowed_price }}</small>{% endif %}
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Valuta</label>
+                    <select name="currency" class="form-select">
+                      <option value="EUR" {% if currency == 'EUR' %}selected{% endif %}>EUR</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Metodo consegna</label>
+                    <select name="delivery_method" class="form-select">
+                      <option value="PDF" {% if delivery_method == 'PDF' %}selected{% endif %}>PDF</option>
+                      <option value="E_TICKET" {% if delivery_method == 'E_TICKET' %}selected{% endif %}>E-Ticket</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Note (opzionale)</label>
+                    <textarea name="notes" rows="2" class="form-control" placeholder="Informazioni utili per la vendita">{{ notes }}</textarea>
+                  </div>
+
+                  <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="theme-btn">Vai al recap</button>
+                    <a href="{% url 'resales_upload_review' upload_id=upload_id %}" class="btn btn-light">Indietro</a>
+                  </div>
+                </form>
+              {% elif step == 'recap' %}
+                <form method="post" class="row g-3">
+                  {% csrf_token %}
+                  <input type="hidden" name="step" value="confirm">
+                  <input type="hidden" name="price_each" value="{{ price_each }}">
+                  <input type="hidden" name="currency" value="{{ currency }}">
+                  <input type="hidden" name="delivery_method" value="{{ delivery_method }}">
+                  <input type="hidden" name="notes" value="{{ notes }}">
+                  {% for sid in selected_ids %}
+                    <input type="hidden" name="subitem_ids" value="{{ sid }}">
+                  {% endfor %}
+
+                  <div class="col-12">
+                    <div class="table-responsive">
+                      <table class="table table-admin align-middle mb-0">
+                        <thead>
                           <tr>
-                            <td><input type="checkbox" name="subitem_ids" value="{{ s.id }}"></td>
-                            <td>
-                              <div class="fw-semibold">{{ s.nome|default:"—" }} {{ s.cognome|default:"" }}</div>
-                              {% if s.email %}<div class="small text-muted">{{ s.email }}</div>{% endif %}
-                            </td>
-                            <td class="text-nowrap">
-                              <div class="small">{{ s.code_type|default:"CODE" }}</div>
-                              <div class="text-muted small">{{ s.code_value|default:"—" }}</div>
-                            </td>
-                            <td class="text-nowrap">
-                              {{ s.settore|default:"" }} {% if s.fila %}- Fila {{ s.fila }}{% endif %}{% if s.posto %} / Posto {{ s.posto }}{% endif %}
-                            </td>
-                            <td class="text-nowrap">{{ s.page|default:"—" }}</td>
-                            <td class="small text-muted">{{ s.note|default:"" }}</td>
+                            <th>Evento</th>
+                            <th>Data</th>
+                            <th>Proprietario</th>
+                            <th>Prezzo biglietto</th>
+                            <th>Prezzo vendita</th>
                           </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {% for s in selected_items %}
+                            <tr>
+                              <td>{{ biglietto.event_name|default:'Evento' }}</td>
+                              <td>{{ biglietto.event_date_fmt|default:'—' }}</td>
+                              <td>{{ s.full_name|default:'Nominativo non trovato' }}</td>
+                              <td>{% if s.price %}€ {{ s.price }}{% else %}—{% endif %}</td>
+                              <td>€ {{ price_each }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div class="small text-muted mt-2">Seleziona i biglietti da includere nell’annuncio.</div>
-                </div>
 
-                <div class="col-md-4">
-                  <label class="form-label">Prezzo per biglietto</label>
-                  <div class="input-group">
-                    <span class="input-group-text">€</span>
-                    <input type="number" name="price_each" class="form-control" step="0.01" min="0" required>
+                  <div class="col-12">
+                    <div class="alert alert-light border mb-0">
+                      <div><strong>Evento:</strong> {{ biglietto.event_name|default:'—' }}</div>
+                      <div><strong>Luogo:</strong> {{ biglietto.venue|default:'—' }}</div>
+                      <div><strong>Data:</strong> {{ biglietto.event_date_fmt|default:'—' }}</div>
+                      <div><strong>Consegna:</strong> {{ delivery_method }}</div>
+                    </div>
                   </div>
-                </div>
 
-                <div class="col-md-3">
-                  <label class="form-label">Valuta</label>
-                  <select name="currency" class="form-select">
-                    <option value="EUR" selected>EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
-                  </select>
-                </div>
+                  <div class="col-12">
+                    <label class="form-check mb-0">
+                      <input type="checkbox" name="accept_listing" value="1" class="form-check-input">
+                      <span class="form-check-label">Confermo il recap e accetto di mettere in vendita questi biglietti.</span>
+                    </label>
+                  </div>
 
-                <div class="col-md-5">
-                  <label class="form-label">Metodo consegna</label>
-                  <select name="delivery_method" class="form-select">
-                    <option value="PDF" selected>PDF</option>
-                    <option value="APP">App/Wallet</option>
-                    <option value="CAMBIO_NOMINATIVO">Cambio nominativo</option>
-                  </select>
-                  <small class="text-muted">Scegli come verrà consegnato il biglietto all’acquirente.</small>
-                </div>
+                  <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="theme-btn"><i class="far fa-tags me-1"></i> Metti in vendita</button>
+                    <button type="button" class="btn btn-light" onclick="history.back()">Indietro</button>
+                  </div>
+                </form>
+              {% else %}
+                <form method="post" class="row g-3">
+                  {% csrf_token %}
+                  <input type="hidden" name="step" value="select">
 
-                <div class="col-md-7">
-                  <label class="form-label">Performance</label>
-                  <select name="performance" class="form-select" required>
-                    <option value="">Seleziona…</option>
-                    {% for p in perf_options %}
-                      <option value="{{ p.id }}">{{ p.title }}</option>
-                    {% endfor %}
-                  </select>
-                  <small class="text-muted">Obbligatoria per creare l’annuncio.</small>
-                </div>
+                  <div class="col-12">
+                    <div class="table-responsive">
+                      <table class="table table-admin align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th style="width:36px"><input type="checkbox" id="chk-all"></th>
+                            <th>Evento</th>
+                            <th>Data</th>
+                            <th>Proprietario</th>
+                            <th class="text-nowrap">QR / Barcode</th>
+                            <th>Prezzo biglietto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for s in subitems %}
+                            <tr>
+                              <td><input type="checkbox" name="subitem_ids" value="{{ s.id }}" {% if s.id|stringformat:'s' in selected_ids %}checked{% endif %}></td>
+                              <td>{{ biglietto.event_name|default:'Evento' }}</td>
+                              <td>{{ biglietto.event_date_fmt|default:'—' }}</td>
+                              <td>{{ s.full_name|default:'Nominativo non trovato' }}</td>
+                              <td>
+                                <div class="small">{{ s.code_type|default:'CODE' }}</div>
+                                <div class="text-muted small">{{ s.code_value|default:biglietto.barcode_masked|default:'—' }}</div>
+                              </td>
+                              <td>{% if s.price %}€ {{ s.price }}{% else %}—{% endif %}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="small text-muted mt-2">Seleziona i biglietti che vuoi mettere in vendita e prosegui.</div>
+                  </div>
 
-                <div class="col-md-5 d-flex align-items-end">
-                  <label class="form-check ms-md-3 mb-0">
-                    <input type="checkbox" name="change_name_required" class="form-check-input">
-                    <span class="form-check-label">Richiede cambio nominativo</span>
-                  </label>
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label">Note (opzionale)</label>
-                  <textarea name="notes" rows="2" class="form-control" placeholder="Es. tempi di consegna, dettagli posto, ecc."></textarea>
-                </div>
-
-                <div class="col-12 d-flex gap-2">
-                  <button type="submit" class="theme-btn"><i class="far fa-tags me-1"></i> Crea annuncio</button>
-                  <a href="{% url 'account_resales' %}" class="btn btn-light">Annulla</a>
-                </div>
-              </form>
+                  <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="theme-btn">Conferma biglietti</button>
+                    <a href="{% url 'account_resales' %}" class="btn btn-light">Annulla</a>
+                  </div>
+                </form>
+              {% endif %}
             {% endif %}
           </div>
         </div>
@@ -146,9 +216,12 @@
           <div class="card-header"><h5 class="m-0">Dati biglietto (estratti)</h5></div>
           <div class="card-body">
             <div class="row g-2">
-              <div class="col-md-6"><strong>Intestatario:</strong> {{ biglietto.nome|default:"" }} {{ biglietto.cognome|default:"" }}</div>
-              <div class="col-md-6"><strong>Email:</strong> {{ biglietto.email|default:"—" }}</div>
-              <div class="col-md-6"><strong>Piattaforma:</strong> {{ biglietto.piattaforma|default:"—" }}</div>
+              <div class="col-md-6"><strong>Evento:</strong> {{ biglietto.event_name|default:"—" }}</div>
+              <div class="col-md-6"><strong>Luogo:</strong> {{ biglietto.venue|default:"—" }}</div>
+              <div class="col-md-6"><strong>Data evento:</strong> {{ biglietto.event_date_fmt|default:"—" }}</div>
+              <div class="col-md-6"><strong>Tipo sorgente:</strong> {{ biglietto.source_kind|default:"—" }}</div>
+              <div class="col-md-6"><strong>Sigillo fiscale:</strong> {{ biglietto.sigillo_fiscale_masked|default:"—" }}</div>
+              <div class="col-md-6"><strong>Barcode:</strong> {{ biglietto.barcode_masked|default:"—" }}</div>
               <div class="col-md-6"><strong>Rilevati:</strong> {{ subitems|length|default:0 }} biglietti</div>
             </div>
           </div>

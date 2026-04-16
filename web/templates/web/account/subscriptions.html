@@ -66,6 +66,11 @@
                             <h4 class="m-0">I tuoi abbonamenti PRO</h4>
                             <small class="text-muted">Elenco degli abbonamenti sottoscritti con stato e scadenze</small>
                         </div>
+                        <div class="btn-group" role="group" aria-label="Filtro abbonamenti">
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-sub-filter active" data-filter="all">Tutti gli eventi</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-sub-filter" data-filter="active">Attivi</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-sub-filter" data-filter="closed_expired">Chiusi/Scaduti</button>
+                        </div>
                     </div>
 
                     <div class="card-body p-0">
@@ -83,7 +88,9 @@
                                 </thead>
                                 <tbody>
                                 {% for it in page_obj.object_list %}
-                                <tr>
+                                {% with st=it.status|default:"attivo"|lower %}
+                                <tr class="js-sub-row"
+                                    data-filter-group="{% if st == 'chiuso' or st == 'closed' or st == 'off' or st == 'scaduto' or st == 'expired' %}closed_expired{% else %}active{% endif %}">
                                     <td>
                                         <div class="d-flex align-items-center">
                                             {% if it.cover %}
@@ -120,21 +127,22 @@
                                     </td>
 
                                     <td class="text-end text-nowrap">
-                                        {# mapping: pending->Pending, success->Attivo, expired->Scaduto, off->Chiuso #}
-                                        {% with st=it.status|default:"pending"|lower %}
-                                        {% if st == "success" %}
-                                        <span class="badge badge-soft success">Attivo</span>
-                                        {% elif st == "expired" %}
-                                        <span class="badge badge-soft danger">Scaduto</span>
-                                        {% elif st == "off" %}
+                                        {% if st == "chiuso" or st == "closed" or st == "off" %}
                                         <span class="badge badge-soft secondary">Chiuso</span>
+                                        {% elif st == "scaduto" or st == "expired" %}
+                                        <span class="badge badge-soft danger">Scaduto</span>
+                                        {% elif st == "attivo" or st == "active" or st == "success" %}
+                                        <span class="badge badge-soft success">Attivo</span>
                                         {% else %}
-                                        <span class="badge badge-soft warning">Pending</span>
+                                        <span class="badge badge-soft success">Attivo</span>
                                         {% endif %}
-                                        {% endwith %}
                                     </td>
                                 </tr>
+                                {% endwith %}
                                 {% endfor %}
+                                <tr id="js-sub-empty" style="display:none;">
+                                    <td colspan="5" class="text-center text-muted py-4">Nessun evento per il filtro selezionato.</td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -146,8 +154,6 @@
 
                 <div class="small text-muted d-flex align-items-center gap-3">
                     <span><span class="badge badge-soft success me-1">Attivo</span> monitoraggio in corso</span>
-                    <span><span
-                            class="badge badge-soft warning me-1">Pending</span> attivo ma non ha ancora trovato</span>
                     <span><span class="badge badge-soft danger me-1">Scaduto</span> abbonamento scaduto</span>
                     <span><span class="badge badge-soft secondary me-1">Chiuso</span> evento trascorso</span>
                 </div>
@@ -182,6 +188,33 @@
       for(const [k,tokens] of rules){ if(matches(tokens)){ key=k; break; } }
       document.querySelectorAll('.nav-account a')
         .forEach(a => a.classList.toggle('active', a.dataset.route === key));
+
+            const filterButtons = document.querySelectorAll('.js-sub-filter');
+            const rows = document.querySelectorAll('.js-sub-row');
+            const emptyRow = document.getElementById('js-sub-empty');
+
+            function applyFilter(filter) {
+                let visible = 0;
+                rows.forEach((row) => {
+                    const group = row.getAttribute('data-filter-group');
+                    const show = (filter === 'all') || (group === filter);
+                    row.style.display = show ? '' : 'none';
+                    if (show) visible += 1;
+                });
+                if (emptyRow) {
+                    emptyRow.style.display = visible === 0 ? '' : 'none';
+                }
+            }
+
+            filterButtons.forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    filterButtons.forEach((b) => b.classList.remove('active'));
+                    this.classList.add('active');
+                    applyFilter(this.dataset.filter || 'all');
+                });
+            });
+
+            applyFilter('all');
     })();
 </script>
 {% endblock %}

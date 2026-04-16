@@ -1,15 +1,15 @@
 {% extends "web/base.html" %}
 {% load static %}
 
-{% block title %}Tutti i rivenditori | Tixy{% endblock %}
+{% block title %}Rivendita | Tixy{% endblock %}
 
 {% block content %}
 <div class="site-breadcrumb" style="background-image:url('{% static 'assets/img/breadcrumb/01.jpg' %}')">
   <div class="container">
-    <h2 class="breadcrumb-title">Tutti i rivenditori</h2>
+    <h2 class="breadcrumb-title">Rivendita</h2>
     <ul class="breadcrumb-menu">
       <li><a href="{% url 'home' %}">Home</a></li>
-      <li class="active">Rivenditori</li>
+      <li class="active">Rivendita</li>
     </ul>
   </div>
 </div>
@@ -18,47 +18,84 @@
 <section class="pt-60 pb-80">
   <div class="container">
     <div class="site-heading-inline mb-3">
-      <h2 class="site-title">Tutti i rivenditori</h2>
+      <h2 class="site-title">Annunci di rivendita</h2>
       <div class="text-muted">{{ count|default:0 }} risultati</div>
     </div>
 
     {% if items %}
       <div class="row g-4">
         {% for it in items %}
-        <div class="col-12 col-md-4">
-            <div class="card h-100 shadow-sm border-0">
-                <!-- IMMAGINE RIMOSSA -->
-
-                <div class="card-body pt-3">
-                    <div class="d-flex align-items-center mb-2">
-                        <span class="badge bg-warning text-dark me-2">Top</span>
-                        <strong class="small text-truncate">
-                            {{ it.name }}
-                        </strong>
-                    </div>
-
-                    {% if it.listings_count %}
-                    <div class="small text-muted mb-1"><i class="far fa-ticket me-1"></i>Annunci: {{ it.listings_count }}</div>
-                    {% endif %}
-
-                    {% if it.rating %}
-                    <div class="mt-2">
-                        <i class="far fa-star me-1"></i>
-                        <strong>{{ it.rating|floatformat:2 }}</strong>
-                        {% if it.reviews %}
-                        <span class="text-muted small">({{ it.reviews }})</span>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+        <div class="col-12 col-lg-6">
+          <article class="seller-card h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+              <div>
+                <div class="mb-1">
+                  <strong class="seller-title">{{ it.seller_name }}</strong>
                 </div>
-
-                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                    <div></div>
-                    <a class="btn btn-sm theme-btn" href="{% url 'search' %}?q={{ it.name }}">
-                        <i class="far fa-cart-shopping me-1"></i> Vedi biglietti
-                    </a>
+                <div class="small text-muted">
+                  {{ it.perf_name }}
+                  {% if it.venue %} • {{ it.venue }}{% endif %}
+                  {% if it.starts_fmt %} • {{ it.starts_fmt }}{% endif %}
                 </div>
+                {% if it.rating %}
+                  <div class="small seller-sub mt-2">
+                    <i class="far fa-star"></i> {{ it.rating|floatformat:2 }}
+                    {% if it.reviews %} • {{ it.reviews }} recensioni{% endif %}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="price-wrap text-end">
+                <small class="d-block">Totale annuncio</small>
+                <div class="price-amount">€ {{ it.total_price|floatformat:2 }} {{ it.currency }}</div>
+                <div class="small price-break">€ {{ it.price_each|floatformat:2 }} cad.</div>
+              </div>
             </div>
+
+            {% if it.notes %}
+              <div class="alert alert-light border mt-3 mb-0">
+                <strong>Annuncio del rivenditore:</strong> {{ it.notes }}
+              </div>
+            {% endif %}
+
+            <ul class="seller-tags mt-3">
+              <li class="chip"><i class="far fa-boxes-stacked"></i> {{ it.qty }} biglietti in vendita</li>
+              {% if it.delivery_method %}
+                <li class="chip"><i class="far fa-truck-fast"></i> {{ it.delivery_method }}</li>
+              {% endif %}
+            </ul>
+
+            {% if it.subitems %}
+              <div class="mt-3">
+                <div class="small fw-semibold mb-2">Biglietti selezionati dal venditore</div>
+                <div class="d-flex flex-column gap-2">
+                  {% for subitem in it.subitems %}
+                    <div class="border rounded-3 px-3 py-2 bg-white">
+                      <div class="fw-semibold">{{ subitem.full_name|default:'Nominativo non trovato' }}</div>
+                      <div class="small text-muted">
+                        {{ subitem.code_type|default:'CODE' }} {{ subitem.code_value|default:'—' }}
+                        {% if subitem.price %} • € {{ subitem.price }}{% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="mt-3">
+              <label class="form-label small fw-semibold">Quantità da acquistare:</label>
+              <div class="input-group">
+                <select class="form-select form-select-sm qty-selector" id="qty_{{ it.id }}" data-qty-max="{{ it.qty }}">
+                </select>
+              </div>
+            </div>
+
+            <div class="text-end mt-3">
+              <a class="btn btn-sm theme-btn acquire-btn" href="#" data-rivendita-id="{{ it.id }}" onclick="acquistaDaRivendita(event, {{ it.id }})">
+                <i class="far fa-cart-shopping me-1"></i> Acquista
+              </a>
+            </div>
+          </article>
         </div>
         {% endfor %}
       </div>
@@ -81,8 +118,33 @@
         </nav>
       {% endif %}
     {% else %}
-      <p class="text-muted">Nessun rivenditore trovato.</p>
+      <p class="text-muted">Nessun annuncio di rivendita disponibile.</p>
     {% endif %}
   </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Popola i dropdown quantity
+  const qtySelectors = document.querySelectorAll('.qty-selector');
+  qtySelectors.forEach(function(select) {
+    const max_qty = parseInt(select.getAttribute('data-qty-max')) || 1;
+    for (let i = 1; i <= max_qty; i++) {
+      const option = document.createElement('option');
+      option.value = i;
+      option.text = i + (i === 1 ? ' biglietto' : ' biglietti');
+      select.appendChild(option);
+    }
+    select.value = 1; // Default to 1
+  });
+});
+
+function acquistaDaRivendita(event, rivenditaId) {
+  event.preventDefault();
+  const qtySelect = document.querySelector(`#qty_${rivenditaId}`);
+  const qty = qtySelect ? parseInt(qtySelect.value) : 1;
+  // Redirect to acquista page with rivendita_id and qty
+  window.location.href = `{% url 'acquista' 0 %}`.replace('0', rivenditaId) + `?qty=${qty}`;
+}
+</script>
 {% endblock %}

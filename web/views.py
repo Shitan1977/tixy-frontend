@@ -255,18 +255,16 @@ def home(request):
 
     # ============================================================
     # 2) PERFORMANCE LIST "globale" (serve per mese + ultimi eventi)
-    #    (API non filtra, quindi prendiamo "molti" e filtriamo qui)
+    #    (API filtra gli eventi futuri, prendiamo "molti" e filtriamo qui)
     # ============================================================
     perf_rows = []
     try:
-        # prendiamo tanti risultati ordinati per data
-        data = tixy_api.search_performances(ordering="starts_at_utc") or {}
-        # se il backend pagina, prendiamo la prima pagina "grossa"
-        # NB: se supporta limit, la passiamo via _api_get diretto:
-        data = tixy_api._api_get("search/performances/", params={"ordering": "starts_at_utc", "limit": 200}) or data
+        data = tixy_api._api_get("performances/", params={"ordering": "starts_at_utc", "limit": 200}) or {}
         perf_rows = data.get("results", data if isinstance(data, list) else []) or []
     except Exception:
         perf_rows = []
+
+    now = datetime.now(dt_timezone.utc)
 
     # normalizzazione performances
     performances = []
@@ -287,10 +285,8 @@ def home(request):
             "raw": p,
         })
 
-    now = datetime.now(dt_timezone.utc)
-
     # ============================================================
-    # 3) EVENTI DEL MESE (mese corrente UTC) -> max 12
+    # 3) EVENTI DEL MESE (mese corrente UTC) -> max 9
     # ============================================================
     start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_day = monthrange(now.year, now.month)[1]
@@ -299,23 +295,23 @@ def home(request):
     month_items = [
         x for x in performances
         if x["starts_dt"] and start_month <= x["starts_dt"] <= end_month
-    ][:12]
+    ][:9]
 
-    # fallback: se non ci sono eventi nel mese -> prossimi 12 FUTURI
+    # fallback: se non ci sono eventi nel mese -> prossimi 9 FUTURI
     if not month_items:
         month_items = [
             x for x in performances
             if x["starts_dt"] and x["starts_dt"] >= now
-        ][:12]
+        ][:9]
 
     # ============================================================
-    # 4) ULTIMI EVENTI (in realtà "prossimi eventi" futuri) -> max 12
+    # 4) ULTIMI EVENTI (in realtà "prossimi eventi" futuri) -> max 9
     #    NON dipendono dai biglietti top.
     # ============================================================
     latest_items = [
         x for x in performances
         if x["starts_dt"] and x["starts_dt"] >= now
-    ][:12]
+    ][:9]
 
     return render(request, "web/home.html", {
         "top_listings": top_listings,
@@ -1203,40 +1199,39 @@ def password_reset_confirm_view(request):
     return render(request, "web/password_reset_confirm.html", {"uid": uid, "token": token})
 
 
-def account_admin(request):
-    # login obbligatorio ma rispetta il "next"
-    guard = _require_api_login(request, next_url=request.get_full_path())
-    if guard:
-        return guard
-
-    token = request.session.get(SESSION_TOKEN_KEY)
-
-    # Profilo (opzionale)
-    profilo = {}
-    try:
-        profilo = api_get_profile(token) or {}
-    except Exception:
-        profilo = {}
-
-    # === SOLO LETTURA per /account/ ===
-    active_alerts = _get_active_alerts(token)          # elenco con scadenza
-    free_alerts_count = _get_free_alerts_count(token)  # count gratuiti
-    active_subscriptions_count = _get_active_subscriptions_count(token)  # count abbonamenti attivi
-    last_ticket = _get_last_order(token)               # ultimo ordine pagato
-
-    ctx = {
-        "profilo": profilo,
-        "active_alerts": active_alerts,
-        "free_alerts_count": free_alerts_count,
-        "active_subscriptions_count": active_subscriptions_count,
-        "last_ticket": last_ticket,
-    }
-    return render(request, "web/admin.html", ctx)
-
-
 # =========================
 # Helper per account_admin
 # =========================
+
+def _api_collect_results(token: str, endpoint: str, page_size: int = 200):
+    """Recupera tutti i risultati paginati da un endpoint DRF."""
+    out = []
+    page = 1
+    while True:
+        try:
+            data = _api_request(
+                "GET",
+                endpoint,
+                params={"page": page, "page_size": page_size},
+                token=token,
+                timeout=10,
+            ) or {}
+        except Exception:
+            break
+
+        rows = data.get("results", data if isinstance(data, list) else []) or []
+        if not rows:
+            break
+        out.extend(rows)
+
+        # Se non e una risposta paginata DRF, una pagina sola.
+        if not isinstance(data, dict) or "next" not in data:
+            break
+        if not data.get("next"):
+            break
+        page += 1
+
+    return out
 
 def _get_active_alerts(token: str):
     """
@@ -1247,8 +1242,7 @@ def _get_active_alerts(token: str):
     
     # Alert gratuiti (EventFollow)
     try:
-        data = _api_request("GET", "event-follows/", token=token, timeout=10) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
+        rows = _api_collect_results(token, "event-follows/")
         for ef in rows:
             ev = (ef.get("evento_info") or {})
             alerts.append({
@@ -1265,10 +1259,12 @@ def _get_active_alerts(token: str):
     # Monitoraggi PRO
 
     try:
-        data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
+        rows = _api_collect_results(token, "monitoraggi/my-pro/")
 
         for m in rows:
+            mapped_status = _map_sub_status(m)
+            if mapped_status != "Attivo":
+                continue
             alerts.append({
                 "id": m.get("id"),
                 "title": m.get("event_title") or "Evento",
@@ -1276,8 +1272,7 @@ def _get_active_alerts(token: str):
                 # activated_at = data attivazione del PRO
                 "created_at": _fmt_iso_dmy_hm(m.get("activated_at") or ""),
                 "expires_at": _fmt_iso_dmy_hm(m.get("expires_at") or ""),
-                # status_label già pronto ("Attivo", "Pending", ecc.)
-                "status": m.get("status_label") or m.get("status") or "Attivo",
+                "status": mapped_status,
             })
     except Exception:
         pass
@@ -1288,8 +1283,7 @@ def _get_active_alerts(token: str):
 def _get_free_alerts_count(token: str) -> int:
     """Conta gli alert gratuiti attivi."""
     try:
-        data = _api_request("GET", "event-follows/", token=token, timeout=10) or {}
-        return int(data.get("count") or len(data.get("results", [])))
+        return len(_api_collect_results(token, "event-follows/"))
     except Exception:
         return 0
 
@@ -1328,8 +1322,7 @@ def _get_last_order(token: str):
 def _get_active_subscriptions_count(token: str) -> int:
     """Conta gli abbonamenti PRO attivi dell'utente."""
     try:
-        data = _api_request("GET", "monitoraggi/my-pro/", token=token, timeout=10) or {}
-        rows = data.get("results", data if isinstance(data, list) else []) or []
+        rows = _api_collect_results(token, "monitoraggi/my-pro/")
         # Conta solo i monitoraggi con status "Attivo"
         count = 0
         for m in rows:
@@ -1337,6 +1330,25 @@ def _get_active_subscriptions_count(token: str) -> int:
             if status == "Attivo":
                 count += 1
         return count
+    except Exception:
+        return 0
+
+
+def _get_my_listings_available_count(token: str) -> int:
+    """
+    Conta i biglietti in vendita non ancora venduti dell'utente.
+    Somma tutte le quantità disponibili (qty - sold_qty) dai listing attivi.
+    """
+    try:
+        rows = _api_collect_results(token, "my/resales/")
+        total_available = 0
+        for listing in rows:
+            qty = int(listing.get("qty") or 0)
+            sold_qty = int(listing.get("sold_qty") or 0)
+            available = qty - sold_qty
+            if available > 0:
+                total_available += available
+        return total_available
     except Exception:
         return 0
 
@@ -1358,14 +1370,19 @@ def account_admin(request):
 
     # === SOLO LETTURA per /account/ ===
     active_alerts = _get_active_alerts(token)          # elenco con scadenza
-    free_alerts_count = _get_free_alerts_count(token)  # count gratuiti
+    # Derivati dalla stessa sorgente della tabella dashboard: evita disallineamenti.
+    free_alerts_count = sum(1 for a in active_alerts if (a.get("type") or "").lower() == "free")
+    active_subscriptions_count = sum(1 for a in active_alerts if (a.get("type") or "").lower() == "pro")
     last_ticket = _get_last_order(token)               # ultimo ordine pagato
+    my_listings_available = _get_my_listings_available_count(token)  # biglietti in vendita
 
     ctx = {
         "profilo": profilo,
         "active_alerts": active_alerts,
         "free_alerts_count": free_alerts_count,
+        "active_subscriptions_count": active_subscriptions_count,
         "last_ticket": last_ticket,
+        "my_listings_available": my_listings_available,
     }
     return render(request, "web/admin.html", ctx)
 
@@ -1836,8 +1853,7 @@ def rivenditori(request):
 
 def rivendita(request):
     """
-    Elenco TUTTI i rivenditori con paginazione.
-    Strategia: prende listings con is_top=True, deduplica per seller_id lato FE.
+    Elenco pubblico degli annunci di rivendita attivi.
     """
     try:
         page = max(1, int(request.GET.get("page", 1)))
@@ -1847,77 +1863,71 @@ def rivendita(request):
     per_page = 36
     base = settings.API_BASE_URL.rstrip("/")
 
-    # === STEP 1: Recupera MOLTI listings (per avere abbastanza seller unici) ===
-    # Chiediamo 500 risultati per avere una buona copertura di rivenditori
-    all_listings = []
+    all_rivendite = []
     try:
         resp = requests.get(
-            f"{base}/listings/",
+            f"{base}/rivendite/",
             params={
-                "limit": 500,          # prendi molti risultati
-                "is_top": "true",      # solo TOP (se usi questo filtro)
-                "ordering": "-created_at",
+                "limit": 500,
+                "ordering": "-creato_il",
             },
             timeout=10,
         )
         resp.raise_for_status()
         data = resp.json() or {}
-        all_listings = data.get("results", data if isinstance(data, list) else []) or []
+        all_rivendite = data.get("results", data if isinstance(data, list) else []) or []
     except Exception:
-        all_listings = []
+        all_rivendite = []
 
-    # Fallback: se is_top non funziona, prova senza filtro
-    if not all_listings:
+    # Fallback senza filtri
+    if not all_rivendite:
         try:
             resp = requests.get(
-                f"{base}/listings/",
-                params={"limit": 500, "ordering": "-created_at"},
+                f"{base}/rivendite/",
+                params={"limit": 500, "ordering": "-creato_il"},
                 timeout=10,
             )
             resp.raise_for_status()
             data = resp.json() or {}
-            all_listings = data.get("results", []) or []
+            all_rivendite = data.get("results", []) or []
         except Exception:
-            all_listings = []
+            all_rivendite = []
 
-    # === STEP 2: Deduplica per seller_id (uno per venditore) ===
-    sellers_map = {}
-    for it in all_listings:
-        seller_id = it.get("seller")
-        if not seller_id or seller_id in sellers_map:
-            continue  # già visto questo seller
+    items_all = []
+    for r in all_rivendite:
+        qty = int(r.get("qty") or 0)
+        if qty <= 0:
+            continue
 
-        seller_info = (it.get("seller_info") or {})
-        first = (seller_info.get("first_name") or "").strip()
-        last = (seller_info.get("last_name") or "").strip()
-        name = f"{first} {last}".strip() or f"Venditore #{seller_id}"
+        evento_info = (r.get("evento_info") or {})
+        seller_name = r.get("venditore_nome_iniziale") or f"Venditore #{r.get('venditore')}"
 
-        # Rating
-        rating = it.get("seller_rating_avg")
         try:
-            rating = float(rating) if rating is not None else None
+            price_each = float(r.get("prezzo") or 0)
         except Exception:
-            rating = None
+            price_each = 0.0
 
-        sellers_map[seller_id] = {
-            "id": seller_id,
-            "name": name,
-            "rating": rating,
-            "reviews": it.get("seller_reviews_count") or 0,
-            "listings_count": it.get("seller_listings_count") or 1,
-        }
+        total_price = price_each * qty
 
-    # === STEP 3: Filtra solo rivenditori con biglietti in vendita ===
-    all_sellers = [s for s in sellers_map.values() if (s.get("listings_count") or 0) > 0]
-    
-    # === STEP 4: Ordina per rating DESC ===
-    all_sellers.sort(key=lambda x: (x["rating"] or 0), reverse=True)
+        items_all.append({
+            "id": r.get("id"),
+            "seller": r.get("venditore"),
+            "seller_name": seller_name,
+            "qty": qty,
+            "price_each": price_each,
+            "total_price": total_price,
+            "currency": "EUR",
+            "delivery_method": "N/A",
+            "perf_name": evento_info.get("evento_nome") or "Evento",
+            "venue": evento_info.get("luogo_nome") or "Luogo",
+            "starts_fmt": _fmt_iso_dmy_hm(evento_info.get("starts_at_utc") or evento_info.get("starts_at") or ""),
+            "subitems": r.get("subitems_list") or [],
+        })
 
-    # === STEP 5: Paginazione FE ===
-    total = len(all_sellers)
+    total = len(items_all)
     start = (page - 1) * per_page
     end = start + per_page
-    items = all_sellers[start:end]
+    items = items_all[start:end]
 
     pages = max(1, ceil(total / per_page))
 
@@ -1939,16 +1949,25 @@ def rivendita(request):
 
 def _map_sub_status(item: dict) -> str:
     """
-    Stati: Attivo | Pending | Scaduto | Chiuso
+    Stati: Attivo | Scaduto | Chiuso
     """
     it = item or {}
     status_raw = (it.get("status") or it.get("stato") or "").lower().strip()
 
-    # ✅ 1) Se l'API ci passa già un'etichetta "umana", usiamola (my-pro: status_label="Attivo")
+    # Se l'API ci passa gia un'etichetta "umana", normalizziamo eventuali Pending/Pedding ad Attivo.
     if it.get("status_label"):
+        label = str(it["status_label"]).strip().lower()
+        if label in ("pending", "pedding"):
+            return "Attivo"
+        if label in ("active", "attivo"):
+            return "Attivo"
+        if label in ("expired", "scaduto"):
+            return "Scaduto"
+        if label in ("closed", "chiuso"):
+            return "Chiuso"
         return str(it["status_label"])
 
-    # ✅ 2) my-pro flat: status="active"
+    # my-pro flat: status="active"
     if status_raw in ("active", "attivo"):
         return "Attivo"
 
@@ -1966,10 +1985,10 @@ def _map_sub_status(item: dict) -> str:
         return "Chiuso"
     if expires and expires < now:
         return "Scaduto"
-    # se c'è un esito "ok", lo consideriamo ancora attivo fino a scadenza/evento
+    # se c'e un esito "ok", lo consideriamo ancora attivo fino a scadenza/evento
     if done_at or status_raw in ("success", "trovato", "completed", "ok"):
         return "Attivo"
-    return "Pending"
+    return "Attivo"
 
 
 
@@ -2188,7 +2207,7 @@ def ticket_download_proxy(request, order_id: int):
     except Exception:
         return HttpResponseBadRequest("Errore durante il download del biglietto.")
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def account_resales_view(request):
     guard = _require_api_login(request, next_url=request.get_full_path())
     if guard: return guard
@@ -2196,6 +2215,115 @@ def account_resales_view(request):
     token = request.session.get(SESSION_TOKEN_KEY)
     page = max(1, int(request.GET.get("page") or 1))
     per_page = 12
+    selected_performance = (request.POST.get("performance") or request.GET.get("performance") or "").strip()
+    open_edit_listing_id = (request.GET.get("edit_listing") or "").strip()
+
+    perf_rows = []
+    try:
+        perf_data = _api_request(
+            "GET",
+            "search/performances/",
+            params={"ordering": "starts_at_utc", "limit": 200},
+            token=token,
+            timeout=15,
+        ) or {}
+        perf_rows = perf_data.get("results", perf_data if isinstance(perf_data, list) else []) or []
+    except Exception:
+        perf_rows = []
+
+    now = datetime.now(dt_timezone.utc)
+    perfs = []
+    for perf in perf_rows:
+        if not isinstance(perf, dict):
+            continue
+        starts_iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
+        starts_dt = _parse_iso_z(starts_iso)
+        if starts_dt and starts_dt < now:
+            continue
+        perf_id = perf.get("id")
+        if not perf_id:
+            continue
+        perfs.append({
+            "id": perf_id,
+            "evento": perf.get("evento_nome") or perf.get("event_name") or "Evento",
+            "venue": perf.get("luogo_nome") or perf.get("venue_name") or "Luogo",
+            "when_fmt": _fmt_iso_dmy_hm(starts_iso),
+        })
+
+    if request.method == "POST" and (request.POST.get("action") == "update_listing_selection"):
+        listing_id = (request.POST.get("listing_id") or "").strip()
+        selected_ids = request.POST.getlist("subitem_ids")
+        redirect_url = reverse("account_resales")
+        if listing_id:
+            redirect_url = f"{redirect_url}?edit_listing={listing_id}#listing-{listing_id}"
+
+        if not listing_id:
+            messages.error(request, "Annuncio non trovato.")
+            return redirect("account_resales")
+        if not selected_ids:
+            messages.error(request, "Seleziona almeno un biglietto da lasciare in vendita.")
+            return redirect(redirect_url)
+
+        try:
+            _api_request(
+                "POST",
+                f"listings/{int(listing_id)}/update-selection/",
+                json={"subitem_ids": list(map(int, selected_ids))},
+                token=token,
+                timeout=30,
+            )
+            messages.success(request, "Annuncio aggiornato con il nuovo numero di biglietti in vendita.")
+            return redirect("account_resales")
+        except Exception as e:
+            messages.error(request, f"Impossibile aggiornare l'annuncio: {e}")
+            return redirect(redirect_url)
+
+    if request.method == "POST":
+        performance_id = (request.POST.get("performance") or "").strip()
+        ticket_url = (request.POST.get("ticket_url") or "").strip()
+        file_obj = request.FILES.get("ticket_file")
+
+        if not (file_obj or ticket_url):
+            messages.error(request, "Carica un PDF oppure inserisci l'URL dell'e-ticket.")
+            return redirect("account_resales")
+
+        try:
+            if file_obj:
+                files = {"path_file": (file_obj.name, file_obj.read(), file_obj.content_type or "application/pdf")}
+                payload = {}
+                if performance_id:
+                    payload["performance"] = performance_id
+                out = _api_request(
+                    "POST",
+                    "ticket-uploads/pdf/",
+                    data=payload,
+                    files=files,
+                    token=token,
+                    timeout=120,
+                ) or {}
+            else:
+                payload = {"url": ticket_url}
+                if performance_id:
+                    payload["performance"] = int(performance_id)
+                out = _api_request(
+                    "POST",
+                    "ticket-uploads/url/",
+                    json=payload,
+                    token=token,
+                    timeout=120,
+                ) or {}
+
+            upload_id = out.get("upload_id")
+            if not upload_id:
+                messages.error(request, "Upload avviato ma non e stato restituito un identificativo.")
+                return redirect("account_resales")
+            return redirect("resales_upload_review", upload_id=upload_id)
+        except requests.HTTPError as e:
+            messages.error(request, f"Biglietto non valido o modificato: {e}")
+            return redirect("account_resales")
+        except Exception as e:
+            messages.error(request, f"Errore durante il caricamento: {e}")
+            return redirect("account_resales")
 
     # chiama l’endpoint backend già presente (TicketUploadViewSet/MyResalesView)
     try:
@@ -2214,7 +2342,8 @@ def account_resales_view(request):
         # stato venduto
         sold_qty = int(r.get("sold_qty") or 0)
         qty = int(r.get("qty") or 0)
-        is_sold = (sold_qty >= qty and qty > 0)
+        status_value = (r.get("status") or "").upper()
+        is_sold = status_value == "SOLD" or qty <= 0
 
         # download PDF (se presente)
         download_url = r.get("download_url")
@@ -2224,6 +2353,7 @@ def account_resales_view(request):
             "created_fmt": _fmt_iso_dmy_hm(r.get("created_at") or ""),
             "price_each": r.get("price_each"),
             "currency": r.get("currency") or "EUR",
+            "status": status_value,
             "qty": qty,
             "sold_qty": sold_qty,
             "is_sold": is_sold,
@@ -2232,6 +2362,9 @@ def account_resales_view(request):
             "venue": (perf.get("luogo_nome") or ""),
             "starts_fmt": _fmt_iso_dmy_hm(starts_iso),
             "download_url": download_url,  # può essere None
+            "selected_subitem_ids": [str(x) for x in (r.get("selected_subitem_ids") or [])],
+            "editable_subitems": r.get("editable_subitems") or [],
+            "is_edit_open": str(r.get("id")) == open_edit_listing_id,
         })
 
     return render(request, "web/account/resales.html", {
@@ -2239,6 +2372,9 @@ def account_resales_view(request):
         "count": int(data.get("count") or len(items)),
         "page": page,
         "page_size": per_page,
+        "perfs": perfs,
+        "selected_performance": selected_performance,
+        "open_edit_listing_id": open_edit_listing_id,
     })
 
 
@@ -2246,114 +2382,7 @@ def account_resales_view(request):
 
 @require_http_methods(["GET", "POST"])
 def resales_upload(request):
-    """
-    Upload biglietto (solo eventi/performances presenti sul portale).
-    - GET: mostra form con select eventi futuri (performance future)
-    - POST: invia a API tickets/upload/ con:
-        performance, qty, price_each, face_value_price, min_price, is_top,
-        delivery_method (dedotto), ticket_file (pdf) O ticket_url
-    """
-    guard = _require_api_login(request, next_url=request.get_full_path())
-    if guard:
-        return guard
-    token = request.session.get(SESSION_TOKEN_KEY)
-
-    # ---- CARICA EVENTI/PERFORMANCE FUTURE DAL PORTALE ----
-    perfs = []
-    try:
-        # prendiamo parecchie righe e teniamo solo future
-        data = search_performances(q=None, date=None, city=None, page=1, ordering="starts_at_utc")
-        rows = data.get("results", data if isinstance(data, list) else []) or []
-    except Exception:
-        rows = []
-
-    utc_now = datetime.now(dt_timezone.utc)
-    for p in rows:
-        perf = p.get("performance_info") if isinstance(p, dict) and "performance_info" in p else p
-        perf = perf or {}
-        iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
-        try:
-            dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=dt_timezone.utc)
-        except Exception:
-            dt = None
-        if not dt or dt < utc_now:
-            continue
-
-        perfs.append({
-            "id": perf.get("id") or p.get("id"),
-            "evento": (perf.get("evento_nome") or "").strip(),
-            "venue": (perf.get("luogo_nome") or "").strip(),
-            "when_iso": iso,
-            "when_fmt": _fmt_iso_dmy_hm(iso),
-        })
-
-    # ordina per data ASC
-    perfs.sort(key=lambda x: x["when_iso"] or "")
-
-    # ---- SUBMIT ----
-    if request.method == "POST":
-        performance_id   = (request.POST.get("performance") or "").strip()
-        qty              = (request.POST.get("qty") or "1").strip()
-        price_each       = (request.POST.get("price_each") or "").strip()          # prezzo richiesto (iniziale)
-        face_value_price = (request.POST.get("face_value_price") or "").strip()    # MAX (valore facciale)
-        min_price        = (request.POST.get("min_price") or "").strip()           # MIN vendita
-        is_top           = True if request.POST.get("is_top") else False
-        ticket_url       = (request.POST.get("ticket_url") or "").strip()
-        file_obj         = request.FILES.get("ticket_file")
-
-        if not performance_id:
-            messages.error(request, "Seleziona l’evento/data (performance).")
-            return redirect(request.path)
-        if not (file_obj or ticket_url):
-            messages.error(request, "Carica un PDF oppure inserisci l’URL del biglietto digitale.")
-            return redirect(request.path)
-
-        # deduci delivery method
-        delivery = "PDF" if file_obj else "E_TICKET"
-
-        # payload per l’API (EUR fisso lato backend)
-        data = {
-            "performance": performance_id,
-            "qty": qty,
-            "price_each": price_each,               # prezzo richiesto
-            "face_value_price": face_value_price,   # prezzo facciale (MAX consentito)
-            "min_price": min_price,                 # prezzo minimo consentito
-            "is_top": is_top,                       # top -> 10% commissioni; altrimenti 2%
-            "delivery_method": delivery,
-        }
-        if ticket_url:
-            data["ticket_url"] = ticket_url
-
-        files = None
-        if file_obj:
-            files = {"ticket_file": (file_obj.name, file_obj.read(), file_obj.content_type or "application/pdf")}
-
-        try:
-            _api_request(
-                "POST",
-                "tickets/upload/",
-                data=data,
-                files=files,
-                token=token,
-                timeout=60,
-            )
-            messages.success(request, "✅ Caricamento avviato. Verificheremo il PDF/QR e i prezzi.")
-            return redirect("account_resales")
-        except requests.HTTPError as e:
-            try:
-                err = e.response.json()
-                msg = (err.get("detail") if isinstance(err, dict) else None) or str(e)
-            except Exception:
-                msg = str(e)
-            messages.error(request, f"Errore upload: {msg}")
-        except Exception as e:
-            messages.error(request, f"Errore upload: {e}")
-
-    return render(request, "web/account/resales_upload.html", {
-        "perfs": perfs,
-    })
+    return redirect("account_resales")
 
 
 @require_http_methods(["GET","POST"])
@@ -2361,43 +2390,9 @@ def resales_upload_review_view(request, upload_id: int):
     guard = _require_api_login(request, next_url=request.get_full_path())
     if guard: return guard
     token = request.session.get(SESSION_TOKEN_KEY)
-
-    if request.method == "POST":
-        price_each = request.POST.get("price_each")
-        currency = request.POST.get("currency") or "EUR"
-        delivery = request.POST.get("delivery_method") or "PDF"
-        notes = request.POST.get("notes") or ""
-        change_req = request.POST.get("change_name_required") in ("1","true","on")
-        performance_id = request.POST.get("performance")  # OBBLIGATORIO (vedi patch backend)
-        sub_ids = request.POST.getlist("subitem_ids")
-
-        if not sub_ids:
-            messages.error(request, "Seleziona almeno un biglietto.")
-        elif not performance_id:
-            messages.error(request, "Seleziona la performance.")
-        else:
-            try:
-                payload = {
-                    "upload_id": int(upload_id),
-                    "subitem_ids": list(map(int, sub_ids)),
-                    "price_each": str(price_each),
-                    "currency": currency,
-                    "delivery_method": delivery,
-                    "change_name_required": change_req,
-                    "notes": notes,
-                    "performance": int(performance_id),
-                }
-                res = _api_request("POST", "listings/create-from-upload/", json=payload, token=token)
-                if res and res.get("listing_id"):
-                    messages.success(request, "Annuncio creato ✅")
-                    return redirect("account_resales")
-                messages.error(request, "Impossibile creare l’annuncio.")
-            except Exception as e:
-                messages.error(request, f"Errore: {e}")
-
     # GET -> recupera review
     try:
-        review = _api_request("GET", f"tickets/upload/{upload_id}/review/", token=token) or {}
+        review = _api_request("GET", f"ticket-uploads/{upload_id}/review/", token=token) or {}
     except Exception as e:
         messages.error(request, f"Impossibile leggere i dettagli upload: {e}")
         return redirect("account_resales")
@@ -2405,11 +2400,124 @@ def resales_upload_review_view(request, upload_id: int):
     # subitems per tabella
     subs = review.get("subitems") or []
     big = review.get("biglietto_info") or {}
+    if big.get("event_date_iso"):
+        big["event_date_fmt"] = _fmt_iso_dmy_hm(big.get("event_date_iso") or "")
+    else:
+        big["event_date_fmt"] = ""
+    status_value = review.get("status") or ""
+
+    if status_value == "ERROR":
+        messages.error(request, review.get("error_message") or "Il biglietto risulta modificato o non valido.")
+        return redirect("account_resales")
+
+    performance_info = big.get("performance") or {}
+    performance_id = performance_info.get("id")
+    selected_ids = []
+    selected_items = []
+    step = "select"
+    price_each = request.POST.get("price_each") or ""
+    currency = request.POST.get("currency") or "EUR"
+    delivery = request.POST.get("delivery_method") or (big.get("source_kind") or "PDF")
+    notes = request.POST.get("notes") or ""
+    accept_listing = request.POST.get("accept_listing") in ("1", "true", "on")
+
+    def _find_selected_items(ids):
+        idset = {str(x) for x in ids}
+        return [s for s in subs if str(s.get("id")) in idset]
+
+    if request.method == "POST":
+        step = request.POST.get("step") or "select"
+        selected_ids = request.POST.getlist("subitem_ids")
+        selected_items = _find_selected_items(selected_ids)
+
+        if step == "select":
+            if not selected_items:
+                messages.error(request, "Seleziona almeno un biglietto da mettere in vendita.")
+                step = "select"
+            else:
+                step = "pricing"
+
+        elif step == "pricing":
+            if not selected_items:
+                messages.error(request, "Seleziona almeno un biglietto da mettere in vendita.")
+                step = "select"
+            else:
+                price_caps = []
+                for item in selected_items:
+                    raw_price = item.get("price")
+                    if raw_price not in (None, ""):
+                        try:
+                            price_caps.append(Decimal(str(raw_price)))
+                        except Exception:
+                            pass
+                max_allowed = min(price_caps) if price_caps else None
+                try:
+                    requested_price = Decimal(str(price_each))
+                except Exception:
+                    requested_price = None
+
+                if requested_price is None or requested_price <= 0:
+                    messages.error(request, "Inserisci un prezzo valido.")
+                    step = "pricing"
+                elif max_allowed is not None and requested_price > max_allowed:
+                    messages.error(request, f"Il prezzo massimo consentito e {max_allowed:.2f} EUR.")
+                    step = "pricing"
+                else:
+                    step = "recap"
+
+        elif step == "confirm":
+            if not selected_items:
+                messages.error(request, "Seleziona almeno un biglietto da mettere in vendita.")
+                step = "select"
+            elif not accept_listing:
+                messages.error(request, "Devi confermare il recap prima di mettere in vendita.")
+                step = "recap"
+            elif not performance_id:
+                messages.error(request, "Performance non trovata per questo biglietto.")
+                step = "select"
+            else:
+                try:
+                    payload = {
+                        "subitem_ids": list(map(int, selected_ids)),
+                        "price_each": str(price_each),
+                        "currency": currency,
+                        "delivery_method": delivery,
+                        "notes": notes,
+                        "performance": int(performance_id),
+                    }
+                    res = _api_request("POST", f"ticket-uploads/{upload_id}/confirm/", json=payload, token=token) or {}
+                    if res.get("listing_id"):
+                        messages.success(request, "Annuncio creato e messo in vendita.")
+                        return redirect("account_resales")
+                    messages.error(request, "Impossibile creare l'annuncio.")
+                    step = "recap"
+                except Exception as e:
+                    messages.error(request, f"Errore durante la conferma: {e}")
+                    step = "recap"
+
+    price_caps = []
+    for item in selected_items:
+        raw_price = item.get("price")
+        if raw_price not in (None, ""):
+            try:
+                price_caps.append(Decimal(str(raw_price)))
+            except Exception:
+                pass
+    max_allowed = min(price_caps) if price_caps else None
 
     return render(request, "web/account/resales_upload_review.html", {
         "upload_id": upload_id,
         "biglietto": big,
         "subitems": subs,
+        "step": step,
+        "selected_ids": [str(x) for x in selected_ids],
+        "selected_items": selected_items,
+        "price_each": price_each,
+        "currency": currency,
+        "delivery_method": delivery,
+        "notes": notes,
+        "max_allowed_price": f"{max_allowed:.2f}" if max_allowed is not None else "",
+        "performance_id": performance_id,
     })
 
 # =========================

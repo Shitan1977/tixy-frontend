@@ -2,12 +2,108 @@
 {% load static %}
 {% load tz %}
 
-{% block title %}Tixy — Carica biglietto{% endblock %}
+{% block title %}Tixy — Rivendita{% endblock %}
 {% block body_class %}account{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
 <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}?v=3">
+<style>
+  .resale-upload-form {
+    position: relative;
+  }
+
+  .listing-edit-card {
+    border: 1px solid rgba(31, 47, 86, 0.12);
+    border-radius: 16px;
+    background: #fbfcff;
+    padding: 18px;
+  }
+
+  .listing-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+  }
+
+  .listing-edit-option {
+    display: block;
+    border: 1px solid rgba(31, 47, 86, 0.12);
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+
+  .listing-edit-option input {
+    margin-right: 8px;
+  }
+
+  .listing-edit-option__meta {
+    display: block;
+    margin-top: 4px;
+    color: #5d667d;
+    font-size: 0.92rem;
+  }
+
+  .resale-upload-loading {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    z-index: 5;
+  }
+
+  .resale-upload-loading.is-visible {
+    display: flex;
+  }
+
+  .resale-upload-loading__box {
+    width: min(100%, 420px);
+    padding: 24px;
+    text-align: center;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #ffffff, #f5f7fb);
+    box-shadow: 0 18px 40px rgba(18, 38, 63, 0.14);
+  }
+
+  .resale-upload-loading__spinner {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 16px;
+    border: 4px solid rgba(31, 47, 86, 0.15);
+    border-top-color: #f3b33d;
+    border-radius: 50%;
+    animation: resale-upload-spin 0.8s linear infinite;
+  }
+
+  .resale-upload-loading__title {
+    margin-bottom: 8px;
+    color: #1f2f56;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  .resale-upload-loading__text {
+    margin: 0;
+    color: #5d667d;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .resale-submit-btn.is-busy {
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  @keyframes resale-upload-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -15,8 +111,8 @@
          style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %})">
   <div class="container d-flex align-items-center justify-content-between">
     <div>
-      <h1 class="m-0 account-hero__title">Carica nuovo biglietto</h1>
-      <p class="subtitle m-0 account-hero__subtitle">Seleziona l’evento dal portale e carica PDF o URL.</p>
+      <h1 class="m-0 account-hero__title">Rivendita</h1>
+      <p class="subtitle m-0 account-hero__subtitle">Carica un PDF o un e-ticket e avvia la messa in vendita.</p>
     </div>
     
   </div>
@@ -46,87 +142,195 @@
 
       <!-- Main -->
       <div class="col-lg-9">
-        <div class="card card-ghost">
-          <div class="card-header"><h4 class="m-0">Dati biglietto</h4></div>
+        <div class="card card-ghost mb-3">
+          <div class="card-header"><h4 class="m-0">Carica biglietto</h4></div>
 
-          <form class="card-body" method="post" enctype="multipart/form-data" novalidate>
+          <form class="card-body resale-upload-form" method="post" enctype="multipart/form-data" novalidate data-upload-form>
             {% csrf_token %}
 
+            <div class="resale-upload-loading" data-upload-loading aria-hidden="true" aria-live="polite">
+              <div class="resale-upload-loading__box">
+                <div class="resale-upload-loading__spinner" aria-hidden="true"></div>
+                <div class="resale-upload-loading__title">Stiamo analizzando il biglietto</div>
+                <p class="resale-upload-loading__text">
+                  Controlliamo il PDF, verifichiamo i dati del ticket e prepariamo il passaggio successivo.
+                </p>
+              </div>
+            </div>
+
+            {% if messages %}
+              <div class="mb-3">
+                {% for m in messages %}
+                  <div class="alert alert-{{ m.tags|default:'info' }} mb-2">{{ m }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <div class="row g-3">
-              <!-- 1) Evento/performance con autocomplete -->
               <div class="col-12">
-                <label class="form-label">Evento (cerca per nome, artista o città)</label>
-                <input 
-                  type="text" 
-                  id="event-search" 
-                  class="form-control" 
-                  placeholder="Inizia a digitare per cercare..."
-                  autocomplete="off"
-                >
-                <input type="hidden" name="performance" id="performance-id" required>
-                <div id="search-results" class="search-results"></div>
-                <small class="form-text text-muted">Seleziona l'evento dalla lista dei risultati</small>
-              </div>
-
-              <!-- 2) Quantità -->
-              <div class="col-md-3">
-                <label class="form-label">Quantità</label>
-                <input type="number" class="form-control" name="qty" min="1" step="1" value="1" required>
-                <div class="form-text">Potrai selezionare i singoli nominativi dopo l’analisi PDF.</div>
-              </div>
-
-              <!-- 3) Prezzo richiesto (iniziale) -->
-              <div class="col-md-3">
-                <label class="form-label">Prezzo richiesto (EUR)</label>
-                <input type="number" class="form-control" name="price_each" min="0" step="0.01" placeholder="es. 59.00" required>
-              </div>
-
-              <!-- 4) Prezzo del biglietto (faciale / max) -->
-              <div class="col-md-3">
-                <label class="form-label">Prezzo del biglietto (MAX)</label>
-                <input type="number" class="form-control" name="face_value_price" min="0" step="0.01" placeholder="valore sul biglietto" required>
-                <div class="form-text">Valore facciale: limite massimo consentito.</div>
-              </div>
-
-              <!-- 5) Prezzo minimo di vendita -->
-              <div class="col-md-3">
-                <label class="form-label">Prezzo minimo (EUR)</label>
-                <input type="number" class="form-control" name="min_price" min="0" step="0.01" placeholder="es. 30.00" required>
-              </div>
-
-              <!-- TOP -->
-              <div class="col-12">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="is_top" name="is_top">
-                  <label class="form-check-label" for="is_top">
-                    Rendi l’annuncio <strong>TOP</strong>
-                  </label>
-                </div>
-                <div class="form-text">
-                  TOP: commissioni <strong>10%</strong> sul venduto. Senza TOP: commissioni <strong>2%</strong>.
+                <div class="alert alert-light border mb-0">
+                  Il sistema controlla se il biglietto e stato modificato, verifica che l'evento esista nei nostri archivi e ti porta allo step successivo solo se il ticket e valido.
                 </div>
               </div>
 
-              <!-- 6) PDF o URL -->
-              <div class="col-md-6">
-                <label class="form-label">Carica PDF (alternativo a URL)</label>
-                <input type="file" class="form-control" name="ticket_file" accept="application/pdf">
-                <div class="form-text">Se carichi il PDF, dedurremo “PDF” come modalità di consegna.</div>
+              <div class="col-12">
+                <label class="form-label">Evento e data <span class="text-muted">(opzionale - viene estratto automaticamente dal biglietto)</span></label>
+                <select class="form-select" id="performance" name="performance">
+                  <option value="">Il sistema lo rileverà automaticamente dal PDF</option>
+                  {% for p in perfs %}
+                    <option value="{{ p.id }}" {% if selected_performance == p.id|stringformat:"s" %}selected{% endif %}>
+                      {{ p.evento }} - {{ p.venue }} - {{ p.when_fmt }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Se il tuo biglietto contiene dati chiari dell'evento, il sistema li estrarrà automaticamente. Altrimenti, selezionalo qui.</div>
               </div>
 
               <div class="col-md-6">
-                <label class="form-label">URL biglietto digitale (alternativo al PDF)</label>
-                <input type="url" class="form-control" name="ticket_url" placeholder="https://…">
-                <div class="form-text">Se compili l’URL (senza PDF), dedurremo “E-TICKET”.</div>
+                <label class="form-label">Carica PDF</label>
+                <input type="file" class="form-control" id="ticket-file" name="ticket_file" accept="application/pdf">
+                <div class="form-text">Il sistema leggera i biglietti presenti nel PDF e ti mostrera quelli vendibili.</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Oppure URL e-ticket</label>
+                <input type="url" class="form-control" id="ticket-url" name="ticket_url" placeholder="https://…">
+                <div class="form-text">Se inserisci un URL, il backend scarica il ticket e applica gli stessi controlli.</div>
               </div>
             </div>
 
             <div class="d-flex justify-content-end mt-4">
-              <button type="submit" class="theme-btn">
-                <i class="far fa-cloud-upload-alt me-1"></i> Avvia caricamento
+              <button type="submit" class="theme-btn resale-submit-btn" data-submit-button>
+                <i class="far fa-cloud-upload-alt me-1" data-submit-icon></i>
+                <span data-submit-label>Analizza biglietto</span>
               </button>
             </div>
           </form>
+        </div>
+
+        <div class="card card-ghost">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <h4 class="m-0">Le mie rivendite</h4>
+            <span class="small text-muted">{{ count }} annunci</span>
+          </div>
+          <div class="card-body">
+            {% if items %}
+              <div class="table-responsive">
+                <table class="table table-admin align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Evento</th>
+                      <th>Data</th>
+                      <th>Prezzo</th>
+                      <th>Biglietti</th>
+                      <th>Stato</th>
+                      <th style="width: 100px;">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in items %}
+                      <tr id="listing-{{ item.id }}">
+                        <td>
+                          <div class="fw-semibold">{{ item.perf_name|default:'Evento' }}</div>
+                          <div class="small text-muted">{{ item.venue|default:'Luogo non disponibile' }}</div>
+                        </td>
+                        <td>{{ item.starts_fmt|default:'—' }}</td>
+                        <td>{{ item.price_each }} {{ item.currency }}</td>
+                        <td>
+                          <div>{{ item.qty }} in vendita</div>
+                          {% if item.sold_qty %}
+                            <div class="small text-muted">{{ item.sold_qty }} gia venduti</div>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if item.is_sold %}
+                            <span class="badge bg-secondary">Venduto</span>
+                          {% else %}
+                            <span class="badge bg-success">Attivo</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if not item.is_sold %}
+                            <div class="d-flex gap-2">
+                              {% if item.editable_subitems %}
+                                <a href="?edit_listing={{ item.id }}#listing-{{ item.id }}"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   title="Modifica i biglietti in vendita">
+                                  <i class="far fa-pen-to-square"></i>
+                                </a>
+                              {% endif %}
+                              <button type="button"
+                                      class="btn btn-sm btn-outline-danger revoke-listing-btn"
+                                      data-listing-id="{{ item.id }}"
+                                      title="Revoca questo annuncio">
+                                <i class="far fa-trash-alt"></i>
+                              </button>
+                            </div>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% if item.is_edit_open and not item.is_sold and item.editable_subitems %}
+                        <tr>
+                          <td colspan="6" class="bg-white">
+                            <div class="listing-edit-card my-2">
+                              <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                                <div>
+                                  <div class="fw-semibold">Modifica biglietti in vendita</div>
+                                  <div class="small text-muted">
+                                    Seleziona i biglietti dello stesso file gia caricato che vuoi lasciare nell'annuncio. Puoi aggiungerne altri oppure deselezionare quelli non ancora venduti.
+                                  </div>
+                                </div>
+                                <a href="{% url 'account_resales' %}#listing-{{ item.id }}" class="btn btn-sm btn-light">Chiudi</a>
+                              </div>
+
+                              <form method="post" class="row g-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="update_listing_selection">
+                                <input type="hidden" name="listing_id" value="{{ item.id }}">
+
+                                <div class="col-12">
+                                  <div class="listing-edit-grid">
+                                    {% for subitem in item.editable_subitems %}
+                                      <label class="listing-edit-option">
+                                        <span>
+                                          <input type="checkbox"
+                                                 name="subitem_ids"
+                                                 value="{{ subitem.id }}"
+                                                 {% if subitem.id|stringformat:'s' in item.selected_subitem_ids %}checked{% endif %}>
+                                          <strong>{{ subitem.full_name|default:'Nominativo non trovato' }}</strong>
+                                        </span>
+                                        <span class="listing-edit-option__meta">
+                                          {{ subitem.code_type|default:'CODE' }} {{ subitem.code_value|default:'—' }}
+                                          {% if subitem.price %} · € {{ subitem.price }}{% endif %}
+                                        </span>
+                                      </label>
+                                    {% endfor %}
+                                  </div>
+                                </div>
+
+                                <div class="col-12">
+                                  <div class="alert alert-light border mb-0">
+                                    Prezzo attuale per biglietto: € {{ item.price_each }} {{ item.currency }}. Se aggiungi ticket con un prezzo nominale piu basso, l'aggiornamento verra bloccato per rispettare il limite massimo consentito.
+                                  </div>
+                                </div>
+
+                                <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+                                  <button type="button" class="btn btn-light" data-select-all-subitems="{{ item.id }}">Seleziona tutti</button>
+                                  <button type="submit" class="theme-btn">Salva modifica</button>
+                                </div>
+                              </form>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">Non hai ancora annunci di rivendita.</p>
+            {% endif %}
+          </div>
         </div>
       </div><!-- /col-lg-9 -->
     </div>
@@ -137,115 +341,106 @@
 {% block extra_js %}
 <script>
 (function(){
-  // Menu attivo
   document.querySelectorAll('.nav-account a')
     .forEach(a => a.classList.toggle('active', a.dataset.route === 'rivendita'));
+  const uploadForm = document.querySelector('[data-upload-form]');
+  const loadingBox = document.querySelector('[data-upload-loading]');
+  const submitButton = document.querySelector('[data-submit-button]');
+  const submitLabel = document.querySelector('[data-submit-label]');
+  const submitIcon = document.querySelector('[data-submit-icon]');
+  const fileInput = document.getElementById('ticket-file');
+  const urlInput = document.getElementById('ticket-url');
 
-  // Autocomplete per ricerca eventi
-  const searchInput = document.getElementById('event-search');
-  const hiddenInput = document.getElementById('performance-id');
-  const resultsDiv = document.getElementById('search-results');
-  let debounceTimer;
-
-  if (!searchInput || !hiddenInput || !resultsDiv) {
-    console.error('Elementi autocomplete non trovati');
-    return;
+  function syncInputs() {
+    if (!fileInput || !urlInput) return;
+    if (fileInput.files && fileInput.files.length > 0) {
+      urlInput.value = '';
+      urlInput.setAttribute('disabled', 'disabled');
+    } else {
+      urlInput.removeAttribute('disabled');
+    }
+    if (urlInput.value.trim()) {
+      fileInput.value = '';
+      fileInput.setAttribute('disabled', 'disabled');
+    } else {
+      fileInput.removeAttribute('disabled');
+    }
   }
 
-  searchInput.addEventListener('input', function() {
-    clearTimeout(debounceTimer);
-    const query = this.value.trim();
+  if (fileInput) fileInput.addEventListener('change', syncInputs);
+  if (urlInput) urlInput.addEventListener('input', syncInputs);
+  syncInputs();
 
-    if (query.length < 2) {
-      resultsDiv.classList.remove('show');
-      hiddenInput.value = '';
-      return;
-    }
-
-    debounceTimer = setTimeout(() => {
-      fetch(`/api/search/performances/?q=${encodeURIComponent(query)}&page_size=10`)
-        .then(res => res.json())
-        .then(data => {
-          const results = data.results || [];
-          
-          if (results.length === 0) {
-            resultsDiv.innerHTML = '<div class="search-no-results">Nessun evento trovato</div>';
-            resultsDiv.classList.add('show');
-            return;
-          }
-
-          resultsDiv.innerHTML = results.map(item => `
-            <div class="search-result-item" data-id="${item.id}" data-name="${escapeHtml(item.evento_nome)}" data-venue="${escapeHtml(item.luogo_nome)}" data-date="${item.starts_at_utc}">
-              <div class="event-title">${escapeHtml(item.evento_nome) || 'Evento'}</div>
-              <div class="event-meta">
-                <i class="far fa-location-dot"></i> ${escapeHtml(item.luogo_nome) || ''} · 
-                <i class="far fa-calendar"></i> ${formatDate(item.starts_at_utc)}
-              </div>
-            </div>
-          `).join('');
-
-          resultsDiv.classList.add('show');
-
-          // Aggiungi evento click a ogni risultato
-          resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-              e.preventDefault();
-              e.stopPropagation();
-              
-              const perfId = this.dataset.id;
-              const eventName = this.dataset.name;
-              const venue = this.dataset.venue;
-              const date = this.dataset.date;
-              
-              // Imposta il valore visibile
-              searchInput.value = `${eventName} - ${venue} - ${formatDate(date)}`;
-              
-              // Imposta l'ID nascosto
-              hiddenInput.value = perfId;
-              
-              // Chiudi i risultati
-              resultsDiv.classList.remove('show');
-              resultsDiv.innerHTML = '';
-              
-              console.log('Selezionato performance ID:', perfId);
-            });
-          });
-        })
-        .catch(err => {
-          console.error('Errore ricerca:', err);
-          resultsDiv.innerHTML = '<div class="search-no-results">Errore durante la ricerca</div>';
-          resultsDiv.classList.add('show');
-        });
-    }, 300);
-  });
-
-  // Chiudi risultati al click fuori
-  document.addEventListener('click', function(e) {
-    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
-      resultsDiv.classList.remove('show');
-    }
-  });
-
-  // Formatta data
-  function formatDate(isoString) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleDateString('it-IT', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', function () {
+      if (submitButton) {
+        submitButton.classList.add('is-busy');
+        submitButton.setAttribute('disabled', 'disabled');
+      }
+      if (submitLabel) {
+        submitLabel.textContent = 'Analisi in corso...';
+      }
+      if (submitIcon) {
+        submitIcon.className = 'far fa-spinner-third fa-spin me-1';
+      }
+      if (loadingBox) {
+        loadingBox.classList.add('is-visible');
+        loadingBox.setAttribute('aria-hidden', 'false');
+      }
     });
   }
 
-  // Escape HTML per sicurezza
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // Gestione revoca annunci
+  document.querySelectorAll('.revoke-listing-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const listingId = this.getAttribute('data-listing-id');
+      const confirmed = confirm('Sei sicuro di voler revocare questo annuncio? I biglietti non venduti verranno liberati.');
+      if (!confirmed) return;
+
+      this.disabled = true;
+      const originalHTML = this.innerHTML;
+      this.innerHTML = '<i class="far fa-spinner-third fa-spin"></i>';
+
+      try {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const response = await fetch(`/api/listings/${listingId}/cancel/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token,
+          },
+        });
+
+        if (response.ok) {
+          const row = this.closest('tr');
+          if (row) {
+            row.innerHTML = '<td colspan="6" class="text-center text-muted py-3"><i class="far fa-check-circle me-2"></i> Annuncio revocato. Riaccarica la pagina.</td>';
+          }
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          const error = await response.json();
+          alert(`Errore: ${error.detail || 'Impossibile revocare l\'annuncio'}`);
+          this.disabled = false;
+          this.innerHTML = originalHTML;
+        }
+      } catch (err) {
+        alert(`Errore di connessione: ${err.message}`);
+        this.disabled = false;
+        this.innerHTML = originalHTML;
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-select-all-subitems]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const form = this.closest('form');
+      if (!form) return;
+      form.querySelectorAll('input[name="subitem_ids"]').forEach(cb => {
+        cb.checked = true;
+      });
+    });
+  });
 })();
 </script>
 {% endblock %}
