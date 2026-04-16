@@ -27,8 +27,7 @@ def _effective_api_base_url() -> str:
     if not base:
         return "http://127.0.0.1:8000/api"
     if debug and (
-        "api.tixy.it" in base
-        or base.startswith("http://127.0.0.1:8001/")
+        base.startswith("http://127.0.0.1:8001/")
         or base.startswith("http://localhost:8001/")
     ):
         return "http://127.0.0.1:8000/api"
