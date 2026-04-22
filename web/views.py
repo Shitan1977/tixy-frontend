@@ -1059,6 +1059,7 @@ def pro_cart(request):
 
     event_id = data.get("event_id")
     performance_id = data.get("performance_id")
+    plan_id = data.get("plan_id")
     periodo = (data.get("periodo") or "1m").strip().lower()
     giorni = int(data.get("giorni") or 30)
     prezzo = data.get("prezzo")
@@ -1075,6 +1076,7 @@ def pro_cart(request):
         request.session[SESSION_PRO_CHECKOUT] = {
             "event_id": event_id,
             "performance_id": performance_id,
+            "plan_id": plan_id,
             "periodo": periodo,
             "mesi": mesi,
             "giorni": giorni,
@@ -1087,6 +1089,7 @@ def pro_cart(request):
     ctx = {
         "event_id": event_id,
         "performance_id": performance_id,
+        "plan_id": plan_id,
         "periodo": periodo,
         "mesi": mesi,
         "giorni": giorni,
@@ -1109,6 +1112,7 @@ def pro_pagamento(request):
 
     event_id = data.get("event_id")
     performance_id = data.get("performance_id")
+    plan_id = data.get("plan_id")
     periodo = data.get("periodo")
     mesi = data.get("mesi")
     giorni = int(data.get("giorni") or 30)
@@ -1122,7 +1126,13 @@ def pro_pagamento(request):
                 messages.error(request, "Pagamento reale non configurato.")
                 return redirect(request.path)
 
-            abb = api_abbonamento_create(token, prezzo=str(prezzo), durata_giorni=giorni, periodo=periodo)
+            abb = api_abbonamento_create(
+                token,
+                plan_id=int(plan_id) if str(plan_id or "").isdigit() else None,
+                prezzo=str(prezzo),
+                durata_giorni=giorni,
+                periodo=periodo,
+            )
             api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id, performance_id=performance_id)
 
             request.session.pop(SESSION_PRO_CHECKOUT, None)
@@ -1134,6 +1144,7 @@ def pro_pagamento(request):
 
     ctx = {
         "event_id": event_id,
+        "plan_id": plan_id,
         "periodo": periodo,
         "mesi": mesi,
         "giorni": giorni,
