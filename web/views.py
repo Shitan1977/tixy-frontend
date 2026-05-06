@@ -903,7 +903,13 @@ def payment_view(request, order_id: int):
 
     if request.method == "POST":
         if SIMULATED_PAYMENTS:
-            messages.success(request, "Pagamento simulato completato ✅")
+            # Conferma il pagamento sul backend (segna DELIVERED + is_sold)
+            token = request.session.get(SESSION_TOKEN_KEY)
+            try:
+                _api_request("POST", f"orders/{order_id}/confirm-payment/", token=token)
+            except Exception:
+                pass  # non blocchiamo l'UX anche se fallisce
+            messages.success(request, "Pagamento completato ✅")
             return redirect("ordine_confermato", order_id=order_id)
         else:
             messages.error(request, "Pagamento reale non configurato (imposta SIMULATED_PAYMENTS=True per test).")
