@@ -56,7 +56,7 @@
               </div>
             {% else %}
               {% if step == 'pricing' %}
-                <form method="post" class="row g-3">
+                <form method="post" class="row g-3" id="pricing-form">
                   {% csrf_token %}
                   <input type="hidden" name="step" value="pricing">
                   {% for sid in selected_ids %}
@@ -65,7 +65,7 @@
 
                   <div class="col-12">
                     <div class="alert alert-light border mb-0">
-                      Hai selezionato {{ selected_items|length }} biglietti. Se disponibile, il prezzo massimo di vendita e quello del biglietto.
+                      Hai selezionato {{ selected_items|length }} biglietti. Se disponibile, il prezzo massimo di vendita e quello del biglietto meno 50 centesimi.
                     </div>
                   </div>
 
@@ -73,7 +73,7 @@
                     <label class="form-label">Prezzo di vendita per biglietto</label>
                     <div class="input-group">
                       <span class="input-group-text">€</span>
-                      <input type="number" name="price_each" class="form-control" step="0.01" min="0.01" {% if max_allowed_price %}max="{{ max_allowed_price }}"{% endif %} value="{{ price_each|default:max_allowed_price }}" required>
+                      <input type="number" name="price_each" id="price_each_input" class="form-control" step="0.01" min="0.01" {% if max_allowed_price %}max="{{ max_allowed_price }}"{% endif %} value="{{ price_each|default:max_allowed_price }}" required>
                     </div>
                     {% if max_allowed_price %}<small class="text-muted">Prezzo massimo consentito: € {{ max_allowed_price }}</small>{% endif %}
                   </div>
@@ -93,6 +93,34 @@
                     </select>
                   </div>
 
+                  {# --- Scelta modalità di vendita --- #}
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Modalità di vendita</label>
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="card card-ghost p-3 h-100 cursor-pointer" style="cursor:pointer">
+                          <div class="d-flex align-items-center gap-2 mb-2">
+                            <input type="radio" name="boost" value="0" class="form-check-input flex-shrink-0" id="boost_standard" {% if not boost %}checked{% endif %}>
+                            <strong>Vendita standard</strong>
+                          </div>
+                          <div class="text-muted small">Commissione Tixy: <strong>2%</strong> sul prezzo di vendita.</div>
+                          <div class="mt-2 small">Incassi: <strong id="net_standard">—</strong></div>
+                        </label>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="card card-ghost p-3 h-100" style="cursor:pointer; border-color: #f5a623;">
+                          <div class="d-flex align-items-center gap-2 mb-2">
+                            <input type="radio" name="boost" value="1" class="form-check-input flex-shrink-0" id="boost_top" {% if boost %}checked{% endif %}>
+                            <strong>🚀 Boost — In primo piano</strong>
+                          </div>
+                          <div class="text-muted small">Commissione Tixy: <strong>10%</strong> sul prezzo di vendita. Il tuo annuncio appare sempre in cima ai risultati.</div>
+                          <div class="mt-2 small">Incassi: <strong id="net_boost">—</strong></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  {# --- fine scelta --- #}
+
                   <div class="col-12">
                     <label class="form-label">Note (opzionale)</label>
                     <textarea name="notes" rows="2" class="form-control" placeholder="Informazioni utili per la vendita">{{ notes }}</textarea>
@@ -111,6 +139,7 @@
                   <input type="hidden" name="currency" value="{{ currency }}">
                   <input type="hidden" name="delivery_method" value="{{ delivery_method }}">
                   <input type="hidden" name="notes" value="{{ notes }}">
+                  <input type="hidden" name="boost" value="{% if boost %}1{% else %}0{% endif %}">
                   {% for sid in selected_ids %}
                     <input type="hidden" name="subitem_ids" value="{{ sid }}">
                   {% endfor %}
@@ -143,7 +172,24 @@
                   </div>
 
                   <div class="col-12">
-                    <div class="alert alert-light border mb-0">
+                    <div class="alert {% if boost %}alert-warning{% else %}alert-light{% endif %} border mb-0">
+                      <div class="mb-2">
+                        {% if boost %}
+                          <span class="badge bg-warning text-dark me-1">🚀 Boost attivo</span> Il tuo annuncio sarà in primo piano.
+                        {% else %}
+                          <span class="badge bg-secondary me-1">Standard</span> Vendita standard.
+                        {% endif %}
+                      </div>
+                      <div class="row g-1 small">
+                        <div class="col-sm-6"><strong>Prezzo per biglietto:</strong> € {{ price_each }}</div>
+                        <div class="col-sm-6"><strong>Commissione Tixy:</strong> {% if boost %}10%{% else %}2%{% endif %}</div>
+                        <div class="col-sm-6"><strong>Incassi netti per biglietto:</strong>
+                          <span id="recap_net"></span>
+                          <noscript>vedi calcolo</noscript>
+                        </div>
+                        <div class="col-sm-6"><strong>N° biglietti:</strong> {{ selected_items|length }}</div>
+                      </div>
+                      <hr class="my-2">
                       <div><strong>Evento:</strong> {{ biglietto.event_name|default:'—' }}</div>
                       <div><strong>Luogo:</strong> {{ biglietto.venue|default:'—' }}</div>
                       <div><strong>Data:</strong> {{ biglietto.event_date_fmt|default:'—' }}</div>
@@ -236,11 +282,44 @@
 {% block extra_js %}
 <script>
 (function(){
+  // Seleziona tutti i checkbox biglietti
   const chkAll = document.getElementById('chk-all');
   if (chkAll){
     chkAll.addEventListener('change', () => {
       document.querySelectorAll('input[name="subitem_ids"]').forEach(cb => cb.checked = chkAll.checked);
     });
+  }
+
+  // Calcolo dinamico commissioni nella schermata pricing
+  function fmt(n){ return '€ ' + n.toFixed(2); }
+
+  function updateNet(){
+    const priceInput = document.getElementById('price_each_input');
+    const netStd    = document.getElementById('net_standard');
+    const netBoost  = document.getElementById('net_boost');
+    if (!priceInput || !netStd || !netBoost) return;
+    const price = parseFloat(priceInput.value) || 0;
+    if (price > 0){
+      netStd.textContent   = fmt(price * (1 - 0.02));
+      netBoost.textContent = fmt(price * (1 - 0.10));
+    } else {
+      netStd.textContent = netBoost.textContent = '—';
+    }
+  }
+
+  const priceInput = document.getElementById('price_each_input');
+  if (priceInput){
+    priceInput.addEventListener('input', updateNet);
+    updateNet();
+  }
+
+  // Calcolo nel recap (lato server ha già i dati, ma aggiorniamo con JS)
+  const recapNet = document.getElementById('recap_net');
+  if (recapNet){
+    const isBoost = {{ boost|yesno:"true,false" }};
+    const priceEach = parseFloat('{{ price_each }}') || 0;
+    const rate = isBoost ? 0.10 : 0.02;
+    recapNet.textContent = priceEach > 0 ? fmt(priceEach * (1 - rate)) : '—';
   }
 })();
 </script>

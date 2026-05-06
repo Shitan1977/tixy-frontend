@@ -20,21 +20,27 @@
             Ti avvisiamo quando compaiono biglietti per questo evento su Tixy.
           </p>
 
-          <form method="post"
-                action="{% url 'attiva_alert' evento.id %}"
-                class="js-one-click d-flex gap-2">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
-            {% if following %}
-              <button type="button" class="theme-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
-                Notifiche attive ✓
-              </button>
-            {% else %}
-              <button type="submit" class="theme-btn">
-                <i class="fa-regular fa-bell"></i> Attiva notifiche
-              </button>
-            {% endif %}
-          </form>
+          {% if evento.id %}
+            <form method="post"
+                  action="{% url 'attiva_alert' evento.id %}"
+                  class="js-one-click d-flex gap-2">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path|default:'' }}">
+              {% if following %}
+                <button type="button" class="theme-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
+                  Notifiche attive ✓
+                </button>
+              {% else %}
+                <button type="submit" class="theme-btn">
+                  <i class="fa-regular fa-bell"></i> Attiva notifiche
+                </button>
+              {% endif %}
+            </form>
+          {% else %}
+            <div class="alert alert-warning mb-0">
+              Non riesco a identificare l'evento da questa pagina. Riapri il risultato dalla ricerca o prova un'altra data.
+            </div>
+          {% endif %}
         </div>
       </div>
 
@@ -57,11 +63,15 @@
             <button type="button" class="theme-btn w-100" disabled style="opacity: 0.6; cursor: not-allowed;">
               Alert PRO attivo ✓
             </button>
-          {% else %}
+          {% elif evento.id %}
             <a class="theme-btn w-100"
                href="{% url 'attiva_pro' %}?event={{ evento.id }}{% if perf.id %}&performance={{ perf.id }}{% endif %}&next={{ request.get_full_path|urlencode }}">
               Attiva PRO
             </a>
+          {% else %}
+            <button type="button" class="theme-btn w-100" disabled style="opacity: 0.6; cursor: not-allowed;">
+              Evento non disponibile
+            </button>
           {% endif %}
         </div>
       </div>

@@ -26,75 +26,48 @@
       <div class="row g-4">
         {% for it in items %}
         <div class="col-12 col-lg-6">
-          <article class="seller-card h-100">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <article class="seller-card h-100 d-flex flex-column">
+
+            {# Evento, luogo, data #}
+            <div class="mb-2">
+              <div class="fw-bold fs-6">{{ it.perf_name }}</div>
+              <div class="small text-muted">
+                {% if it.venue %}<i class="far fa-location-dot me-1"></i>{{ it.venue }}{% endif %}
+                {% if it.starts_fmt %} &nbsp;·&nbsp; <i class="far fa-calendar me-1"></i>{{ it.starts_fmt }}{% endif %}
+              </div>
+            </div>
+
+            <hr class="my-2">
+
+            {# Rivenditore, quantità, tipologia #}
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
               <div>
-                <div class="mb-1">
-                  <strong class="seller-title">{{ it.seller_name }}</strong>
-                </div>
-                <div class="small text-muted">
-                  {{ it.perf_name }}
-                  {% if it.venue %} • {{ it.venue }}{% endif %}
-                  {% if it.starts_fmt %} • {{ it.starts_fmt }}{% endif %}
-                </div>
-                {% if it.rating %}
-                  <div class="small seller-sub mt-2">
-                    <i class="far fa-star"></i> {{ it.rating|floatformat:2 }}
-                    {% if it.reviews %} • {{ it.reviews }} recensioni{% endif %}
-                  </div>
-                {% endif %}
+                <div class="small text-muted">Rivenditore</div>
+                <div class="fw-semibold">{{ it.seller_name }}</div>
               </div>
-
-              <div class="price-wrap text-end">
-                <small class="d-block">Totale annuncio</small>
-                <div class="price-amount">€ {{ it.total_price|floatformat:2 }} {{ it.currency }}</div>
-                <div class="small price-break">€ {{ it.price_each|floatformat:2 }} cad.</div>
+              <div>
+                <div class="small text-muted">Biglietti</div>
+                <div class="fw-semibold">{{ it.qty }}</div>
               </div>
-            </div>
-
-            {% if it.notes %}
-              <div class="alert alert-light border mt-3 mb-0">
-                <strong>Annuncio del rivenditore:</strong> {{ it.notes }}
-              </div>
-            {% endif %}
-
-            <ul class="seller-tags mt-3">
-              <li class="chip"><i class="far fa-boxes-stacked"></i> {{ it.qty }} biglietti in vendita</li>
               {% if it.delivery_method %}
-                <li class="chip"><i class="far fa-truck-fast"></i> {{ it.delivery_method }}</li>
-              {% endif %}
-            </ul>
-
-            {% if it.subitems %}
-              <div class="mt-3">
-                <div class="small fw-semibold mb-2">Biglietti selezionati dal venditore</div>
-                <div class="d-flex flex-column gap-2">
-                  {% for subitem in it.subitems %}
-                    <div class="border rounded-3 px-3 py-2 bg-white">
-                      <div class="fw-semibold">{{ subitem.full_name|default:'Nominativo non trovato' }}</div>
-                      <div class="small text-muted">
-                        {{ subitem.code_type|default:'CODE' }} {{ subitem.code_value|default:'—' }}
-                        {% if subitem.price %} • € {{ subitem.price }}{% endif %}
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
+              <div>
+                <div class="small text-muted">Tipologia</div>
+                <div class="fw-semibold">{{ it.delivery_method }}</div>
               </div>
-            {% endif %}
-
-            <div class="mt-3">
-              <label class="form-label small fw-semibold">Quantità da acquistare:</label>
-              <div class="input-group">
-                <select class="form-select form-select-sm qty-selector" id="qty_{{ it.id }}" data-qty-max="{{ it.qty }}">
-                </select>
+              {% endif %}
+              <div class="ms-auto text-end">
+                <div class="small text-muted">Prezzo cad.</div>
+                <div class="fw-bold text-primary fs-6">€ {{ it.price_each|floatformat:2 }}</div>
               </div>
             </div>
 
-            <div class="text-end mt-3">
-              <a class="btn btn-sm theme-btn acquire-btn" href="#" data-rivendita-id="{{ it.id }}" onclick="acquistaDaRivendita(event, {{ it.id }})">
+            {# Pulsante acquista #}
+            <div class="mt-auto text-end">
+              <a class="btn btn-sm theme-btn" href="{% url 'acquista' it.id %}">
                 <i class="far fa-cart-shopping me-1"></i> Acquista
               </a>
             </div>
+
           </article>
         </div>
         {% endfor %}
@@ -123,28 +96,4 @@
   </div>
 </section>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Popola i dropdown quantity
-  const qtySelectors = document.querySelectorAll('.qty-selector');
-  qtySelectors.forEach(function(select) {
-    const max_qty = parseInt(select.getAttribute('data-qty-max')) || 1;
-    for (let i = 1; i <= max_qty; i++) {
-      const option = document.createElement('option');
-      option.value = i;
-      option.text = i + (i === 1 ? ' biglietto' : ' biglietti');
-      select.appendChild(option);
-    }
-    select.value = 1; // Default to 1
-  });
-});
-
-function acquistaDaRivendita(event, rivenditaId) {
-  event.preventDefault();
-  const qtySelect = document.querySelector(`#qty_${rivenditaId}`);
-  const qty = qtySelect ? parseInt(qtySelect.value) : 1;
-  // Redirect to acquista page with rivendita_id and qty
-  window.location.href = `{% url 'acquista' 0 %}`.replace('0', rivenditaId) + `?qty=${qty}`;
-}
-</script>
 {% endblock %}

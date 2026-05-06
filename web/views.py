@@ -214,7 +214,7 @@ def home(request):
     # ============================================================
     raw = []
     try:
-        data = _api_request("GET", "listings/", params={"limit": 48, "is_top": "true"})
+        data = _api_request("GET", "listings/", params={"limit": 48, "is_top": "true", "status": "ACTIVE"})
         raw = data.get("results", data if isinstance(data, list) else []) or []
     except Exception:
         raw = []
@@ -230,7 +230,12 @@ def home(request):
         )
 
     if raw and isinstance(raw, list):
-        raw = [it for it in raw if _is_top(it)]
+        raw = [
+            it for it in raw
+            if _is_top(it)
+            and str(it.get("status") or "ACTIVE").upper() == "ACTIVE"
+            and int(it.get("qty") or 0) > 0
+        ]
 
     # normalizzazione per template (TOP)
     top_listings = []
@@ -360,100 +365,116 @@ from datetime import datetime, timezone as dt_timezone
 
 def get_other_dates_by_title(perf: dict, perf_id: int):
     """
-    Ritorna altre performance dello stesso evento (altre date).
-    Preferisce cercare per evento_id; fallback su titolo.
+    Ritorna tutte le performance future legate allo stesso artista,
+    escludendo la performance corrente.
     """
-    # Estrai evento_id
-    event_id = (perf.get("evento") or perf.get("event") or perf.get("evento_id")
-                or (perf.get("performance_info") or {}).get("evento")
-                or (perf.get("performance_info") or {}).get("event")
-                or (perf.get("performance_info") or {}).get("evento_id"))
-    
-    titolo_raw = (perf.get("evento_nome")
-                  or (perf.get("performance_info") or {}).get("evento_nome")
-                  or perf.get("title")
-                  or "")
-    titolo = _norm_title(titolo_raw)
+    perf_info = perf.get("performance_info") if isinstance(perf, dict) else None
+    perf_info = perf_info if isinstance(perf_info, dict) else {}
 
-    city_ref = (perf.get("citta") or perf.get("city") or "").strip().lower()
+    event_id = (
+        perf.get("evento") or perf.get("event") or perf.get("evento_id")
+        or perf_info.get("evento") or perf_info.get("event") or perf_info.get("evento_id")
+    )
+
+    titolo_raw = (
+        perf.get("evento_nome")
+        or perf_info.get("evento_nome")
+        or perf.get("title")
+        or perf_info.get("title")
+        or ""
+    ).strip()
+
+    # Estraggo il nome artista dal titolo evento (es. "Artista - Tour 2026" -> "Artista")
+    artista_query = re.split(r"\s[-|:–—]\s|\(|\[", titolo_raw, maxsplit=1)[0].strip()
+    if not artista_query:
+        artista_query = titolo_raw
+
     now_utc = datetime.now(dt_timezone.utc)
-
     rows = []
 
-    # PREFERENZA: Cerca per evento_id (diretto, preciso)
+    if artista_query:
+        try:
+            data = _api_request(
+                "GET",
+                "search/performances/",
+                params={"q": artista_query, "ordering": "starts_at_utc", "limit": 250},
+            ) or {}
+            rows.extend(data.get("results", data if isinstance(data, list) else []) or [])
+        except Exception:
+            pass
+
+    if titolo_raw and _norm_title(titolo_raw) != _norm_title(artista_query):
+        try:
+            data = _api_request(
+                "GET",
+                "search/performances/",
+                params={"q": titolo_raw, "ordering": "starts_at_utc", "limit": 250},
+            ) or {}
+            rows.extend(data.get("results", data if isinstance(data, list) else []) or [])
+        except Exception:
+            pass
+
+    # Aggiungo anche le date dello stesso event_id, se disponibile.
     if event_id:
         try:
-            data = _api_request("GET", "search/performances/", 
-                              params={"evento_id": event_id, "ordering": "starts_at_utc", "limit": 250}) or {}
-            rows = data.get("results", data if isinstance(data, list) else []) or []
-        except Exception as e:
-            rows = []
-
-    # FALLBACK: Se niente per evento_id, cerca per titolo
-    if not rows and titolo:
-        try:
-            data = _api_request("GET", "search/performances/",
-                              params={"q": titolo_raw, "ordering": "starts_at_utc", "limit": 250}) or {}
-            rows = data.get("results", data if isinstance(data, list) else []) or []
-        except Exception as e:
+            rows.extend(_fetch_event_performances_any(int(event_id)) or [])
+        except Exception:
             pass
 
     out = []
-    for idx, p in enumerate(rows):
+    seen_ids = set()
+    for p in rows:
         if not isinstance(p, dict):
             continue
 
-        pp = p.get("performance_info") or p  # fallback
-        pid = pp.get("id") or p.get("id")
-        if not pid or str(pid) == str(perf_id):
+        pp = p.get("performance_info") or p
+        if not isinstance(pp, dict):
             continue
 
-        # Se cercavamo per titolo (fallback), verifica match
-        if not event_id and titolo:
-            t_raw = (pp.get("evento_nome") or p.get("evento_nome") or pp.get("title") or p.get("title") or "")
-            t_norm = _norm_title(t_raw)
-            if t_norm != titolo:
-                continue
+        pid = pp.get("id") or p.get("id")
+        if not pid:
+            continue
+        if str(pid) == str(perf_id):
+            continue
 
-        # date da pp oppure p
-        iso = (pp.get("starts_at_utc") or p.get("starts_at_utc") or
-               pp.get("starts_at") or p.get("starts_at") or "")
+        try:
+            pid_int = int(pid)
+        except Exception:
+            continue
+
+        if pid_int in seen_ids:
+            continue
+
+        iso = (
+            pp.get("starts_at_utc") or p.get("starts_at_utc")
+            or pp.get("starts_at") or p.get("starts_at") or ""
+        )
         if not iso:
             continue
 
-        # solo future
-        dt_ok = True
         try:
             dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=dt_timezone.utc)
             if dt < now_utc:
-                dt_ok = False
+                continue
         except Exception:
-            dt_ok = True
-
-        if not dt_ok:
+            # Se la data non è parsabile non la includo: qui vogliamo solo date future certe.
             continue
 
-        # filtro soft città SOLO se entrambe presenti
-        city = (pp.get("citta") or p.get("citta") or pp.get("city") or p.get("city") or "").strip().lower()
-        if city_ref and city and city != city_ref:
-            continue
+        seen_ids.add(pid_int)
+        out.append(
+            {
+                "id": pid_int,
+                "starts_iso": iso,
+                "starts_fmt": _fmt_iso_dmy_hm(iso),
+                "city": (pp.get("citta") or p.get("citta") or pp.get("city") or p.get("city") or "").strip() or None,
+                "venue": (pp.get("luogo_nome") or p.get("luogo_nome") or pp.get("venue") or p.get("venue") or "").strip() or None,
+                "prezzo_min": pp.get("prezzo_min") or p.get("prezzo_min"),
+            }
+        )
 
-        # Estrai venue
-        venue = (pp.get("luogo_nome") or p.get("luogo_nome") or pp.get("venue") or p.get("venue") or "").strip()
-        
-        # Costruisci dizionario come richiesto dal template
-        out.append({
-            "id": int(pid),
-            "starts_iso": iso,
-            "starts_fmt": _fmt_iso_dmy_hm(iso),
-            "city": city or None,
-            "venue": venue or None,
-            "prezzo_min": pp.get("prezzo_min") or p.get("prezzo_min"),
-        })
-
-    out.sort(key=lambda x: x.get("starts_at_utc") or x.get("starts_at") or "")
+    out.sort(key=lambda x: x.get("starts_iso") or "")
     return out
 
 
@@ -486,7 +507,7 @@ def event_listings(request, perf_id: int):
 
         for d in (raw_dates or []):
             pid = d.get("id")
-            iso = d.get("starts_at_utc") or d.get("starts_at") or ""
+            iso = d.get("starts_iso") or d.get("starts_at_utc") or d.get("starts_at") or ""
             if not pid or not iso:
                 continue
 
@@ -512,12 +533,20 @@ def event_listings(request, perf_id: int):
         dates = norm
 
         # 4) event_id (serve per follow, esterne, ecc.)
-        event_id = (
+        raw_event_id = (
             perf.get("evento") or perf.get("event") or perf.get("evento_id")
             or (perf.get("performance_info") or {}).get("evento")
             or (perf.get("performance_info") or {}).get("event")
             or (perf.get("performance_info") or {}).get("evento_id")
         )
+
+        if isinstance(raw_event_id, dict):
+            raw_event_id = raw_event_id.get("id") or raw_event_id.get("pk")
+
+        try:
+            event_id = int(raw_event_id) if raw_event_id not in (None, "") else None
+        except Exception:
+            event_id = None
 
         # 5) Listings Tixy per la performance
         data_listings = get_performance_listings(perf_id)
@@ -858,6 +887,7 @@ def payment_view(request, order_id: int):
 
     perf = (order.get("listing_info") or {}).get("performance_info") or {}
     starts_iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
+    perf_when = _fmt_iso_dmy_hm(starts_iso)
     change_fee, change_msg, change_required = calc_change_name_fee(starts_iso)
     final_total = (base_total + change_fee).quantize(Decimal("0.01"))
 
@@ -898,6 +928,7 @@ def order_confirmed_view(request, order_id: int):
 
     perf = (order.get("listing_info") or {}).get("performance_info") or {}
     starts_iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
+    perf_when = _fmt_iso_dmy_hm(starts_iso)
     change_fee, change_msg, change_required = calc_change_name_fee(starts_iso)
     final_total = (base_total + change_fee).quantize(Decimal("0.01"))
 
@@ -1549,6 +1580,7 @@ def order_summary_view(request, order_id: int):
 
     perf = (order.get("listing_info") or {}).get("performance_info") or {}
     starts_iso = perf.get("starts_at_utc") or perf.get("starts_at") or ""
+    perf_when = _fmt_iso_dmy_hm(starts_iso)
     change_fee, change_msg, change_required = calc_change_name_fee(starts_iso)
     final_total = (base_total + change_fee).quantize(Decimal("0.01"))
 
@@ -1906,7 +1938,7 @@ def rivenditori(request):
 
 def rivendita(request):
     """
-    Elenco pubblico degli annunci di rivendita attivi.
+    Elenco pubblico degli annunci di rivendita attivi (usa /listings/).
     """
     try:
         page = max(1, int(request.GET.get("page", 1)))
@@ -1914,73 +1946,70 @@ def rivendita(request):
         page = 1
 
     per_page = 36
-    base = settings.API_BASE_URL.rstrip("/")
+    offset = (page - 1) * per_page
 
-    all_rivendite = []
+    raw = []
     try:
-        resp = requests.get(
-            f"{base}/rivendite/",
-            params={
-                "limit": 500,
-                "ordering": "-creato_il",
-            },
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json() or {}
-        all_rivendite = data.get("results", data if isinstance(data, list) else []) or []
+        data = _api_request(
+            "GET", "listings/",
+            params={"limit": per_page, "offset": offset, "status": "ACTIVE", "ordering": "-created_at"},
+        ) or {}
+        raw = data.get("results", data if isinstance(data, list) else []) or []
+        total = int(data.get("count") or len(raw))
     except Exception:
-        all_rivendite = []
+        raw = []
+        total = 0
 
-    # Fallback senza filtri
-    if not all_rivendite:
-        try:
-            resp = requests.get(
-                f"{base}/rivendite/",
-                params={"limit": 500, "ordering": "-creato_il"},
-                timeout=10,
-            )
-            resp.raise_for_status()
-            data = resp.json() or {}
-            all_rivendite = data.get("results", []) or []
-        except Exception:
-            all_rivendite = []
-
-    items_all = []
-    for r in all_rivendite:
+    items = []
+    for r in raw:
         qty = int(r.get("qty") or 0)
         if qty <= 0:
             continue
 
-        evento_info = (r.get("evento_info") or {})
-        seller_name = r.get("venditore_nome_iniziale") or f"Venditore #{r.get('venditore')}"
+        perf = (r.get("performance_info") or {})
+        seller = (r.get("seller_info") or {})
+        seller_name = (
+            seller.get("display_name")
+            or f"{(seller.get('first_name') or '').strip()} {(seller.get('last_name') or '').strip()}".strip()
+            or f"Venditore #{r.get('seller')}"
+        )
 
         try:
-            price_each = float(r.get("prezzo") or 0)
+            price_each = float(r.get("price_each") or 0)
         except Exception:
             price_each = 0.0
 
         total_price = price_each * qty
 
-        items_all.append({
+        # subitems pubblici
+        subitems_raw = r.get("public_subitems") or []
+        subitems = [
+            {
+                "full_name": s.get("full_name") or s.get("name") or "",
+                "code_type": s.get("code_type") or "CODE",
+                "code_value": s.get("code_value") or s.get("barcode") or "—",
+                "price": s.get("face_value") or s.get("price") or "",
+            }
+            for s in subitems_raw
+        ]
+
+        items.append({
             "id": r.get("id"),
-            "seller": r.get("venditore"),
+            "seller": r.get("seller"),
             "seller_name": seller_name,
+            "rating": r.get("seller_rating_avg"),
+            "reviews": r.get("seller_reviews_count"),
             "qty": qty,
             "price_each": price_each,
             "total_price": total_price,
-            "currency": "EUR",
-            "delivery_method": "N/A",
-            "perf_name": evento_info.get("evento_nome") or "Evento",
-            "venue": evento_info.get("luogo_nome") or "Luogo",
-            "starts_fmt": _fmt_iso_dmy_hm(evento_info.get("starts_at_utc") or evento_info.get("starts_at") or ""),
-            "subitems": r.get("subitems_list") or [],
+            "currency": r.get("currency") or "EUR",
+            "delivery_method": r.get("delivery_method") or "",
+            "notes": r.get("notes") or "",
+            "perf_name": perf.get("evento_nome") or "Evento",
+            "venue": perf.get("luogo_nome") or "",
+            "starts_fmt": _fmt_iso_dmy_hm(perf.get("starts_at_utc") or perf.get("starts_at") or ""),
+            "subitems": subitems,
         })
-
-    total = len(items_all)
-    start = (page - 1) * per_page
-    end = start + per_page
-    items = items_all[start:end]
 
     pages = max(1, ceil(total / per_page))
 
@@ -2167,20 +2196,28 @@ def account_tickets_view(request):
     # Normalizzazione per il template
     items = []
     for r in rows:
-        # struttura robusta: prova più campi noti
+        # L'API /my/purchases/ restituisce campi piatti (flat)
+        # Manteniamo anche fallback per strutture nested legacy
         listing = (r.get("listing_info") or r.get("listing") or {}) or {}
         perf    = (listing.get("performance_info") or r.get("performance_info") or {}) or {}
 
-        order_id   = r.get("id") or r.get("order_id")
+        order_id    = r.get("id") or r.get("order_id")
         created_iso = r.get("created_at") or r.get("paid_at") or r.get("delivered_at") or ""
-        starts_iso  = perf.get("starts_at_utc") or perf.get("starts_at") or ""
-        event_title = (
-            perf.get("evento_nome") or perf.get("title") or
-            listing.get("title") or r.get("event_title") or "Evento"
+        starts_iso  = (
+            r.get("performance_datetime") or
+            perf.get("starts_at_utc") or perf.get("starts_at") or ""
         )
-        venue = perf.get("luogo_nome") or perf.get("venue") or ""
+        event_title = (
+            r.get("event_title") or
+            perf.get("evento_nome") or perf.get("title") or
+            listing.get("title") or "Evento"
+        )
+        venue = (
+            r.get("venue") or
+            perf.get("luogo_nome") or perf.get("venue") or ""
+        )
         qty = r.get("qty") or 1
-        total_price = r.get("total") or r.get("total_price") or listing.get("price_each")
+        total_price = r.get("price_total") or r.get("total") or r.get("total_price") or listing.get("price_each")
         currency = r.get("currency") or listing.get("currency") or "EUR"
 
         # URL download: usa quello dell’API se presente, altrimenti passa dal proxy FE
@@ -2472,6 +2509,7 @@ def resales_upload_review_view(request, upload_id: int):
     currency = request.POST.get("currency") or "EUR"
     delivery = request.POST.get("delivery_method") or (big.get("source_kind") or "PDF")
     notes = request.POST.get("notes") or ""
+    boost = request.POST.get("boost") in ("1", "true", "on")
     accept_listing = request.POST.get("accept_listing") in ("1", "true", "on")
 
     def _find_selected_items(ids):
@@ -2503,7 +2541,7 @@ def resales_upload_review_view(request, upload_id: int):
                             price_caps.append(Decimal(str(raw_price)))
                         except Exception:
                             pass
-                max_allowed = min(price_caps) if price_caps else None
+                max_allowed = (min(price_caps) - Decimal("0.50")) if price_caps else None
                 try:
                     requested_price = Decimal(str(price_each))
                 except Exception:
@@ -2537,6 +2575,7 @@ def resales_upload_review_view(request, upload_id: int):
                         "delivery_method": delivery,
                         "notes": notes,
                         "performance": int(performance_id),
+                        "is_top": boost,
                     }
                     res = _api_request("POST", f"ticket-uploads/{upload_id}/confirm/", json=payload, token=token) or {}
                     if res.get("listing_id"):
@@ -2556,7 +2595,7 @@ def resales_upload_review_view(request, upload_id: int):
                 price_caps.append(Decimal(str(raw_price)))
             except Exception:
                 pass
-    max_allowed = min(price_caps) if price_caps else None
+    max_allowed = (min(price_caps) - Decimal("0.50")) if price_caps else None
 
     return render(request, "web/account/resales_upload_review.html", {
         "upload_id": upload_id,
@@ -2571,6 +2610,7 @@ def resales_upload_review_view(request, upload_id: int):
         "notes": notes,
         "max_allowed_price": f"{max_allowed:.2f}" if max_allowed is not None else "",
         "performance_id": performance_id,
+        "boost": boost,
     })
 
 # =========================

@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load static %}
+{% load static dt_extras %}
 
 {% block title %}Conferma Acquisto | Tixy{% endblock %}
 
@@ -120,10 +120,24 @@
             <h4>Riepilogo & Consensi</h4>
           </div>
 
-          <form method="post" class="row g-3">
+<form method="post" class="row g-3" id="checkout-form">
             {% csrf_token %}
             <input type="hidden" name="action" value="prosegui">
-            <input type="hidden" name="qty" value="{{ qty|default:1 }}">
+
+            {% if listing.qty > 1 %}
+            <div class="col-12">
+              <label class="form-label fw-semibold">Quantità biglietti</label>
+              <select class="form-select" name="qty" id="qty-select">
+                {% for i in listing.qty|upto %}
+                  <option value="{{ i }}" {% if i == qty %}selected{% endif %}>
+                    {{ i }} bigliett{% if i == 1 %}o{% else %}i{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="qty" value="1">
+            {% endif %}
 
             {% if not auth_required and profilo %}
               <div class="col-12">
@@ -178,7 +192,7 @@
               <li><i class="fa-solid fa-location-dot"></i> {{ p.luogo_nome }}</li>
               {% if listing.seller_info %}
                 <li><i class="fa-solid fa-user"></i> Venditore:
-                  {{ listing.seller_info.first_name }} {{ listing.seller_info.last_name }}
+                  {{ listing.seller_info.display_name|default:listing.seller_info.first_name }}
                 </li>
               {% endif %}
             </ul>
@@ -186,7 +200,7 @@
           {% endwith %}
 
           <div class="summary-items">
-            <!-- Riga principale: posti / categoria / prezzo unitario -->
+            <!-- Riga principale: prezzo unitario -->
             <div class="item">
               <div>
                 {% if listing.seat_category %}
@@ -196,24 +210,21 @@
                     , Posti {{ listing.seat_from }}{% if listing.seat_to %}-{{ listing.seat_to }}{% endif %}
                   {% endif %}
                 {% else %}
-                  <strong>Posti:</strong> {{ listing.qty|default:qty }}
+                  <strong>Prezzo unitario</strong>
                 {% endif %}
               </div>
               <div class="price">€ {{ listing.price_each }}</div>
             </div>
 
-            <!-- Se abbiamo i calcoli di preview, mostriamo subtotal + commission -->
-            {% if preview_subtotal %}
-              <div class="item">
-                <div><strong>Quantità</strong> × {{ qty|default:1 }}</div>
-                <div class="price">€ {{ preview_subtotal }}</div>
-              </div>
-            {% endif %}
+            <div class="item">
+              <div>Quantità × <span id="summary-qty">{{ qty|default:1 }}</span></div>
+              <div class="price" id="summary-subtotal">€ {{ preview_subtotal|default:listing.price_each }}</div>
+            </div>
 
             {% if preview_commission %}
               <div class="item">
-                <div>Commissioni</div>
-                <div class="price">€ {{ preview_commission }}</div>
+                <div>Commissioni (<span id="summary-qty-comm">{{ qty|default:1 }}</span>×)</div>
+                <div class="price" id="summary-commission">€ {{ preview_commission }}</div>
               </div>
             {% endif %}
 
@@ -229,7 +240,7 @@
           <!-- TOTALE -->
           <div class="summary-total">
             <span>Totale</span>
-            <strong>
+            <strong id="summary-total">
               € {% if final_total %}{{ final_total }}{% elif preview_total %}{{ preview_total }}{% elif preview.total %}{{ preview.total }}{% else %}{{ listing.price_each }}{% endif %}
             </strong>
           </div>
@@ -256,4 +267,41 @@
     </div>
   </div>
 </section>
+
+<script>
+(function() {
+  var qtySelect = document.getElementById('qty-select');
+  if (!qtySelect) return;
+
+  var unitPrice    = parseFloat("{{ listing.price_each|default:0 }}") || 0;
+  var commRate     = parseFloat("{{ preview_commission|default:0 }}") / Math.max(1, parseFloat("{{ preview_subtotal|default:1 }}") || 1);
+  var changeFee    = parseFloat("{{ change_fee|default:0 }}") || 0;
+
+  function fmt(n) {
+    return n.toFixed(2).replace('.', ',');
+  }
+
+  function update() {
+    var qty      = parseInt(qtySelect.value) || 1;
+    var subtotal = unitPrice * qty;
+    var comm     = subtotal * commRate;
+    var total    = subtotal + comm + changeFee;
+
+    var elQty    = document.getElementById('summary-qty');
+    var elQtyC   = document.getElementById('summary-qty-comm');
+    var elSub    = document.getElementById('summary-subtotal');
+    var elComm   = document.getElementById('summary-commission');
+    var elTotal  = document.getElementById('summary-total');
+
+    if (elQty)   elQty.textContent   = qty;
+    if (elQtyC)  elQtyC.textContent  = qty;
+    if (elSub)   elSub.textContent   = '€ ' + fmt(subtotal);
+    if (elComm)  elComm.textContent  = '€ ' + fmt(comm);
+    if (elTotal) elTotal.textContent = '€ ' + fmt(total);
+  }
+
+  qtySelect.addEventListener('change', update);
+  update();
+})();
+</script>
 {% endblock %}

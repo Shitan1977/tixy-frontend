@@ -92,8 +92,8 @@
                       <th>Evento</th>
                       <th class="d-none d-md-table-cell">Luogo</th>
                       <th class="text-nowrap">Data concerto</th>
-                      <th class="d-none d-lg-table-cell text-nowrap">Ordine</th>
-                      <th class="d-none d-lg-table-cell text-nowrap text-end">Totale</th>
+                      <th class="text-nowrap">Data acquisto</th>
+                      <th class="text-center">Biglietti</th>
                       <th class="text-end">Azioni</th>
                     </tr>
                   </thead>
@@ -101,44 +101,31 @@
                     {% for t in page_obj.object_list %}
                       <tr>
                         <td>
-                          <div class="fw-semibold">{{ t.perf_title|default:"Evento" }}</div>
-                          {% if t.seat_label %}
-                            <div class="small text-muted">{{ t.seat_label }}</div>
-                          {% endif %}
-                          {% if t.qty %}
-                            <div class="small text-muted">Quantità: {{ t.qty }}</div>
-                          {% endif %}
+                          <div class="fw-semibold">{{ t.event_title|default:"Evento" }}</div>
                           {% if t.is_expired %}
                             <span class="badge badge-soft danger mt-1">Scaduto</span>
                           {% endif %}
                         </td>
 
                         <td class="d-none d-md-table-cell">
-                          <span class="text-muted">{{ t.venue|default_if_none:"" }}</span>
+                          <span class="text-muted">{{ t.venue|default:"—" }}</span>
                         </td>
 
                         <td class="text-nowrap">
-                          {{ t.event_date_fmt|default:"—" }}
+                          {{ t.starts_fmt|default:"—" }}
                         </td>
 
-                        <td class="d-none d-lg-table-cell text-nowrap">
-                          #{{ t.order_id }}
-                          {% if t.created_fmt %}
-                            <div class="small text-muted">Acquisto: {{ t.created_fmt }}</div>
-                          {% endif %}
+                        <td class="text-nowrap">
+                          {{ t.created_fmt|default:"—" }}
                         </td>
 
-                        <td class="d-none d-lg-table-cell text-end">
-                          {% if t.total %}
-                            € {{ t.total }}
-                          {% else %}
-                            <span class="text-muted">—</span>
-                          {% endif %}
+                        <td class="text-center">
+                          {{ t.qty|default:1 }}
                         </td>
 
                         <td class="text-end">
-                          {% if t.download_url %}
-                            <a href="{{ t.download_url }}" class="btn btn-sm btn-primary">
+                          {% if t.download_href %}
+                            <a href="{{ t.download_href }}" class="btn btn-sm btn-primary">
                               <i class="far fa-download me-1"></i> Download
                             </a>
                           {% else %}

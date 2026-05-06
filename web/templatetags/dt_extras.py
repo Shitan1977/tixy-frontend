@@ -13,3 +13,11 @@ def iso_to_datetime(value):
     if timezone.is_naive(dt):
         dt = timezone.make_aware(dt, timezone.utc)
     return timezone.localtime(dt)
+
+@register.filter
+def upto(value):
+    """Ritorna range(1, value+1) per usarlo nei for loop del template."""
+    try:
+        return range(1, int(value) + 1)
+    except (TypeError, ValueError):
+        return range(1, 2)
