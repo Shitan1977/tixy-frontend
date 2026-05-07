@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-vl7_uxea+si&u=vh-!+vlwwn06+)#w75hq3ej+3d)@(#-1_rpw"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # settings.py (frontend) // evutiamo cros
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000/api")
