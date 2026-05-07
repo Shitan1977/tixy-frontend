@@ -234,11 +234,13 @@ def api_event_follow_status(token: str, event_id: int) -> bool:
         return False
 
 
-def api_pro_alert_status(token: str, event_id: int, event_title: str = None) -> bool:
+def api_pro_alert_status(token: str, event_id: int, event_title: str = None, performance_id: int = None) -> bool:
     """
     Verifica se l'utente ha già un abbonamento PRO attivo per un evento.
     Controlla i monitoraggi legati ad abbonamenti PRO.
-    Confronta per event_id e, se non trova match, anche per event_title.
+    Se performance_id è fornito, controlla la corrispondenza specifica per evento+performance
+    (stessa data): restituisce True solo se c'è già un monitoraggio per quella specifica performance.
+    Senza performance_id, fa il match solo per event_id/event_title.
     """
     base = _effective_api_base_url()
     url = f"{base}/monitoraggi/my-pro/"
@@ -254,27 +256,39 @@ def api_pro_alert_status(token: str, event_id: int, event_title: str = None) -> 
         r.raise_for_status()
         data = r.json()
         items = data.get("results", data if isinstance(data, list) else [])
-        
+
         # Normalizza il titolo per confronto case-insensitive
         event_title_norm = event_title.strip().upper() if event_title else None
-        
-        # Cerca se c'è un monitoraggio per questo evento
+
+        # Cerca se c'è un monitoraggio per questo evento/performance
         for item in items:
             item_event_id = item.get("event_id")
+            item_perf_id = item.get("performance_id")
             item_event_title = item.get("event_title")
-            
-            # Match per event_id
+
+            # Verifica se questo item corrisponde all'evento (per id o per titolo)
+            event_match = False
             if item_event_id and item_event_id == event_id:
-                return True
-            
-            # Fallback: match per event_title
-            if event_title_norm and item_event_title:
-                item_title_norm = item_event_title.strip().upper()
-                if item_title_norm == event_title_norm:
+                event_match = True
+            elif event_title_norm and item_event_title:
+                if item_event_title.strip().upper() == event_title_norm:
+                    event_match = True
+
+            if not event_match:
+                continue
+
+            # Se è specificata una performance, controlla anche quella
+            if performance_id is not None:
+                if item_perf_id and item_perf_id == performance_id:
                     return True
-        
+                # nessun match di performance: continua a cercare
+                continue
+
+            # Nessuna performance specificata: match solo per evento
+            return True
+
         return False
-    except Exception as e:
+    except Exception:
         return False
 
 

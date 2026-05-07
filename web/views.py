@@ -574,7 +574,7 @@ def event_listings(request, perf_id: int):
                              or (perf.get("performance_info") or {}).get("evento_nome") 
                              or "")
                 already_following = api_event_follow_status(token, int(event_id))
-                already_following_pro = api_pro_alert_status(token, int(event_id), event_title)
+                already_following_pro = api_pro_alert_status(token, int(event_id), event_title, performance_id=perf_id)
         except Exception as exc:
             already_following = False
             already_following_pro = False
