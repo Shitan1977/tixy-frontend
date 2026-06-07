@@ -85,14 +85,25 @@ def _auth_headers(token: str | None) -> dict:
 # SEARCH / AUTOCOMPLETE
 # ---------------------------
 
-def search_performances(q=None, date=None, city=None, page=None, ordering=None, page_size=None):
+def search_performances(
+    q=None,
+    date=None,
+    city=None,
+    page=None,
+    ordering=None,
+    page_size=None,
+    date_from=None,
+    date_to=None,
+):
     params: dict = {}
     if q:         params["q"] = q
     if date:      params["date"] = date
+    if date_from: params["date_from"] = date_from
+    if date_to:   params["date_to"] = date_to
     if city:      params["city"] = city
     if page:      params["page"] = page
     if ordering:  params["ordering"] = ordering
-    if page_size: params["page_size"] = page_size   # <-- aggiungi questo
+    if page_size: params["page_size"] = page_size
     return _api_get("search/performances/", params=params)
 
 

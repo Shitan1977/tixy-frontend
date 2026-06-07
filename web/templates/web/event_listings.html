@@ -103,7 +103,7 @@
                     {% if l.seller_info %}
                       <strong class="seller-title">
                         {{ l.seller_info.first_name|default_if_none:"" }}
-                        {{ l.seller_info.last_name|default_if_none:"Venditore" }}
+                        {% if l.seller_info.last_name %} {{ l.seller_info.last_name|slice:":1" }}.{% endif %}
                       </strong>
 
                       {% if l.seller_info.socials_verified %}

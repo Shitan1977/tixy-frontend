@@ -55,6 +55,23 @@
                 Analisi in corso… <a href="" onclick="location.reload(); return false;">Aggiorna</a>
               </div>
             {% else %}
+              {% if listed_count %}
+                <div class="alert alert-warning border mb-3">
+                  <strong>Attenzione:</strong> {{ listed_count }} biglietti risultano gia in vendita e non sono selezionabili.
+                  {% if selectable_count > 0 %}
+                    Puoi proseguire con i restanti {{ selectable_count }} biglietti.
+                  {% endif %}
+                  <ul class="mb-0 mt-2 small">
+                    {% for s in listed_items %}
+                      <li>
+                        #{{ s.id }} - {{ s.full_name|default:'Nominativo non trovato' }}
+                        {% if s.sigillo_fiscale %} - Sigillo fiscale: {{ s.sigillo_fiscale }}{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
               {% if step == 'pricing' %}
                 <form method="post" class="row g-3" id="pricing-form">
                   {% csrf_token %}
@@ -78,18 +95,10 @@
                     {% if max_allowed_price %}<small class="text-muted">Prezzo massimo consentito: € {{ max_allowed_price }}</small>{% endif %}
                   </div>
 
-                  <div class="col-md-4">
+                  <div class="col-md-8">
                     <label class="form-label">Valuta</label>
                     <select name="currency" class="form-select">
                       <option value="EUR" {% if currency == 'EUR' %}selected{% endif %}>EUR</option>
-                    </select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Metodo consegna</label>
-                    <select name="delivery_method" class="form-select">
-                      <option value="PDF" {% if delivery_method == 'PDF' %}selected{% endif %}>PDF</option>
-                      <option value="E_TICKET" {% if delivery_method == 'E_TICKET' %}selected{% endif %}>E-Ticket</option>
                     </select>
                   </div>
 
@@ -137,7 +146,6 @@
                   <input type="hidden" name="step" value="confirm">
                   <input type="hidden" name="price_each" value="{{ price_each }}">
                   <input type="hidden" name="currency" value="{{ currency }}">
-                  <input type="hidden" name="delivery_method" value="{{ delivery_method }}">
                   <input type="hidden" name="notes" value="{{ notes }}">
                   <input type="hidden" name="boost" value="{% if boost %}1{% else %}0{% endif %}">
                   {% for sid in selected_ids %}
@@ -193,7 +201,6 @@
                       <div><strong>Evento:</strong> {{ biglietto.event_name|default:'—' }}</div>
                       <div><strong>Luogo:</strong> {{ biglietto.venue|default:'—' }}</div>
                       <div><strong>Data:</strong> {{ biglietto.event_date_fmt|default:'—' }}</div>
-                      <div><strong>Consegna:</strong> {{ delivery_method }}</div>
                     </div>
                   </div>
 
@@ -223,20 +230,32 @@
                             <th>Evento</th>
                             <th>Data</th>
                             <th>Proprietario</th>
-                            <th class="text-nowrap">QR / Barcode</th>
+                            <th class="text-nowrap">Sigillo fiscale</th>
                             <th>Prezzo biglietto</th>
                           </tr>
                         </thead>
                         <tbody>
                           {% for s in subitems %}
                             <tr>
-                              <td><input type="checkbox" name="subitem_ids" value="{{ s.id }}" {% if s.id|stringformat:'s' in selected_ids %}checked{% endif %}></td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  name="subitem_ids"
+                                  value="{{ s.id }}"
+                                  {% if s.id|stringformat:'s' in selected_ids %}checked{% endif %}
+                                  {% if s.is_listed %}disabled{% endif %}
+                                >
+                              </td>
                               <td>{{ biglietto.event_name|default:'Evento' }}</td>
                               <td>{{ biglietto.event_date_fmt|default:'—' }}</td>
-                              <td>{{ s.full_name|default:'Nominativo non trovato' }}</td>
                               <td>
-                                <div class="small">{{ s.code_type|default:'CODE' }}</div>
-                                <div class="text-muted small">{{ s.code_value|default:biglietto.barcode_masked|default:'—' }}</div>
+                                {{ s.full_name|default:'Nominativo non trovato' }}
+                                {% if s.is_listed %}
+                                  <div class="small text-danger">Gia in vendita</div>
+                                {% endif %}
+                              </td>
+                              <td>
+                                <div class="text-muted small">{{ s.sigillo_fiscale|default:'—' }}</div>
                               </td>
                               <td>{% if s.price %}€ {{ s.price }}{% else %}—{% endif %}</td>
                             </tr>
@@ -266,9 +285,6 @@
               <div class="col-md-6"><strong>Luogo:</strong> {{ biglietto.venue|default:"—" }}</div>
               <div class="col-md-6"><strong>Data evento:</strong> {{ biglietto.event_date_fmt|default:"—" }}</div>
               <div class="col-md-6"><strong>Tipo sorgente:</strong> {{ biglietto.source_kind|default:"—" }}</div>
-              <div class="col-md-6"><strong>Sigillo fiscale:</strong> {{ biglietto.sigillo_fiscale_masked|default:"—" }}</div>
-              <div class="col-md-6"><strong>Barcode:</strong> {{ biglietto.barcode_masked|default:"—" }}</div>
-              <div class="col-md-6"><strong>Rilevati:</strong> {{ subitems|length|default:0 }} biglietti</div>
             </div>
           </div>
         </div>

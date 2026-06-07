@@ -188,14 +188,10 @@
                   {% with perf_id=item.performance|default:item.performance_info.id|default:item.perf_id %}
                     <span class="seller-name">
                       Venditore:
-                      {% if seller_id %}
-                        <a class="seller-link"
-                           href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni">
-                          <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
-                        </a>
-                      {% else %}
-                        <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
-                      {% endif %}
+                      <strong>
+                        {{ item.seller_info.first_name|default:"" }}
+                        {% if item.seller_info.last_name %} {{ item.seller_info.last_name|slice:":1" }}.{% endif %}
+                      </strong>
                     </span>
 
                     {% if item.seller_rating_avg %}
@@ -272,14 +268,10 @@
                 {% with perf_id=item.performance|default:item.performance_info.id|default:item.perf_id %}
                   <span class="seller-name">
                     Venditore:
-                    {% if seller_id %}
-                      <a class="seller-link"
-                         href="{% url 'reviews' %}?venditore={{ seller_id }}{% if perf_id %}&performance={{ perf_id }}{% endif %}{% if request.get_full_path %}&origin={{ request.get_full_path|urlencode }}{% endif %}#recensioni">
-                        <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
-                      </a>
-                    {% else %}
-                      <strong>{{ item.seller_info.first_name|default:"" }} {{ item.seller_info.last_name|default:"" }}</strong>
-                    {% endif %}
+                    <strong>
+                      {{ item.seller_info.first_name|default:"" }}
+                      {% if item.seller_info.last_name %} {{ item.seller_info.last_name|slice:":1" }}.{% endif %}
+                    </strong>
                   </span>
 
                   {% if item.seller_rating_avg %}

@@ -1622,23 +1622,97 @@ def events_index(request):
     else:
         ordering = "starts_at_utc"
 
-    now_utc = datetime.now(dt_timezone.utc)
+    # Filtro per mese: formato YYYY-MM, es. "2026-07"
+    month_filter = request.GET.get("month", "").strip()
+    try:
+        filter_year, filter_month = (int(x) for x in month_filter.split("-")) if month_filter else (None, None)
+    except Exception:
+        filter_year, filter_month = None, None
+        month_filter = ""
 
-    # Raccoglie TUTTI gli eventi futuri disponibili per calcolare correttamente il numero di pagine
+    today = datetime.now(dt_timezone.utc).date()
+
+    # Costruisce range date per ridurre risultati lato API.
+    date_from = today.isoformat()
+    date_to = None
+    if filter_year and filter_month:
+        try:
+            first_day = datetime(filter_year, filter_month, 1).date()
+            last_day = datetime(filter_year, filter_month, monthrange(filter_year, filter_month)[1]).date()
+            date_from = max(today, first_day).isoformat()
+            date_to = last_day.isoformat()
+        except Exception:
+            month_filter = ""
+
+    def _normalize_items(raw_items):
+        out = []
+        for it in raw_items:
+            if not isinstance(it, dict):
+                continue
+            iso = (it.get("starts_at_utc") or (it.get("performance_info") or {}).get("starts_at_utc") or "")
+            evento_nome = (it.get("evento_nome") or (it.get("performance_info") or {}).get("evento_nome") or "").strip()
+            luogo_nome = (it.get("luogo_nome") or (it.get("performance_info") or {}).get("luogo_nome") or "").strip()
+            perf_id = it.get("id") or it.get("performance")
+            out.append({
+                "perf_id": perf_id,
+                "evento_nome": evento_nome,
+                "luogo_nome": luogo_nome,
+                "starts_iso": iso,
+                "starts_fmt": _fmt_iso_dmy_hm(iso),
+            })
+        return out
+
+    # Fast path: usa paginazione API (1 chiamata) per i sort data, i più usati.
+    if sort in ("date_asc", "date_desc"):
+        data = {}
+        try:
+            data = search_performances(
+                q=None,
+                city=None,
+                page=page,
+                ordering=ordering,
+                page_size=per_page,
+                date_from=date_from,
+                date_to=date_to,
+            ) or {}
+        except Exception:
+            data = {}
+
+        raw = data.get("results", data if isinstance(data, list) else []) or []
+        page_items = _normalize_items(raw)
+        total = int(data.get("count") or len(page_items))
+        pages = max(1, ceil(total / per_page))
+        has_next = bool(data.get("next")) if isinstance(data, dict) else page < pages
+
+        return render(request, "web/events_index.html", {
+            "items": page_items,
+            "count": total,
+            "page": page,
+            "pages": pages,
+            "has_prev": page > 1,
+            "has_next": has_next,
+            "prev_page": page - 1,
+            "next_page": page + 1,
+            "month_filter": month_filter,
+        })
+
+    # Fallback A-Z/Z-A: mantiene comportamento attuale con ordinamento alfabetico globale.
     collected = []
-
     api_page = 1
-    max_api_pages = 100  # safety - aumentato per gestire più eventi
-    api_page_size = 100  # chiediamo più righe per volta per essere più efficiente
+    max_api_pages = 100
+    api_page_size = 100
 
     while api_page <= max_api_pages:
         data = {}
         try:
             data = search_performances(
-                q=None, date=None, city=None,
+                q=None,
+                city=None,
                 page=api_page,
-                ordering=ordering,
-                page_size=api_page_size
+                ordering="starts_at_utc",
+                page_size=api_page_size,
+                date_from=date_from,
+                date_to=date_to,
             ) or {}
         except Exception:
             break
@@ -1647,57 +1721,23 @@ def events_index(request):
         if not raw:
             break
 
-        for it in raw:
-            if not isinstance(it, dict):
-                continue
+        collected.extend(_normalize_items(raw))
 
-            iso = (it.get("starts_at_utc") or
-                   (it.get("performance_info") or {}).get("starts_at_utc") or "")
-            try:
-                dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=dt_timezone.utc)
-            except Exception:
-                continue
-
-            if dt <= now_utc:
-                continue
-
-            evento_nome = (it.get("evento_nome") or (it.get("performance_info") or {}).get("evento_nome") or "").strip()
-            luogo_nome  = (it.get("luogo_nome")  or (it.get("performance_info") or {}).get("luogo_nome")  or "").strip()
-            perf_id     = it.get("id") or it.get("performance")
-
-            collected.append({
-                "perf_id": perf_id,
-                "evento_nome": evento_nome,
-                "luogo_nome": luogo_nome,
-                "starts_iso": iso,
-                "starts_fmt": _fmt_iso_dmy_hm(iso),
-            })
-
-        # se l'API ha next=None puoi anche interrompere qui:
         if isinstance(data, dict) and not data.get("next"):
             break
-
         api_page += 1
 
-    # ordina secondo filtro scelto
-    if sort == "date_asc":
-        collected.sort(key=lambda x: x.get("starts_iso") or "")
-    elif sort == "date_desc":
-        collected.sort(key=lambda x: x.get("starts_iso") or "", reverse=True)
-    elif sort == "az":
+    if sort == "az":
         collected.sort(key=lambda x: (x.get("evento_nome") or "").lower())
     elif sort == "za":
         collected.sort(key=lambda x: (x.get("evento_nome") or "").lower(), reverse=True)
     else:
         collected.sort(key=lambda x: x.get("starts_iso") or "")
 
-    total = len(collected)  # totale “che abbiamo visto” (stima FE)
+    total = len(collected)
     start = (page - 1) * per_page
     end = start + per_page
     page_items = collected[start:end]
-
     pages = max(1, ceil(total / per_page))
 
     return render(request, "web/events_index.html", {
@@ -1709,6 +1749,7 @@ def events_index(request):
         "has_next": page < pages,
         "prev_page": page - 1,
         "next_page": page + 1,
+        "month_filter": month_filter,
     })
 
 
@@ -2495,6 +2536,9 @@ def resales_upload_review_view(request, upload_id: int):
 
     # subitems per tabella
     subs = review.get("subitems") or []
+    listed_items = [s for s in subs if bool(s.get("is_listed"))]
+    listed_count = len(listed_items)
+    selectable_count = len(subs) - listed_count
     big = review.get("biglietto_info") or {}
     if big.get("event_date_iso"):
         big["event_date_fmt"] = _fmt_iso_dmy_hm(big.get("event_date_iso") or "")
@@ -2520,12 +2564,17 @@ def resales_upload_review_view(request, upload_id: int):
 
     def _find_selected_items(ids):
         idset = {str(x) for x in ids}
-        return [s for s in subs if str(s.get("id")) in idset]
+        return [
+            s for s in subs
+            if str(s.get("id")) in idset and not bool(s.get("is_listed"))
+        ]
 
     if request.method == "POST":
         step = request.POST.get("step") or "select"
         selected_ids = request.POST.getlist("subitem_ids")
         selected_items = _find_selected_items(selected_ids)
+        # Mantieni solo ID realmente selezionabili per evitare payload sporchi tra gli step.
+        selected_ids = [str(s.get("id")) for s in selected_items if s.get("id") is not None]
 
         if step == "select":
             if not selected_items:
@@ -2575,7 +2624,7 @@ def resales_upload_review_view(request, upload_id: int):
             else:
                 try:
                     payload = {
-                        "subitem_ids": list(map(int, selected_ids)),
+                        "subitem_ids": [int(sid) for sid in selected_ids],
                         "price_each": str(price_each),
                         "currency": currency,
                         "delivery_method": delivery,
@@ -2607,6 +2656,9 @@ def resales_upload_review_view(request, upload_id: int):
         "upload_id": upload_id,
         "biglietto": big,
         "subitems": subs,
+        "listed_items": listed_items,
+        "listed_count": listed_count,
+        "selectable_count": selectable_count,
         "step": step,
         "selected_ids": [str(x) for x in selected_ids],
         "selected_items": selected_items,
