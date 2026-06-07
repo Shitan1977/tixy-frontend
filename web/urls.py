@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path(".well-known/appspecific/com.chrome.devtools.json", views.chrome_devtools_probe, name="chrome_devtools_probe"),
+
     # Statiche / contenuti
     path("", views.home, name="home"),
     path("top/", views.top, name="top"),

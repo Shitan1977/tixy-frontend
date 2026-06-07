@@ -4,6 +4,31 @@
 
 {% block title %}Biglietti | Tixy{% endblock %}
 
+{% block extra_css %}
+<style>
+  .event-listings-theme .seller-card{
+    background: var(--theme-bg-light);
+    border: 1px solid var(--border-info-color);
+    box-shadow: none;
+  }
+  .event-listings-theme .seller-card .bg-white,
+  .event-listings-theme .seller-card[style*="border:1px solid rgba(0,0,0,.08)"]{
+    background: var(--theme-bg-light) !important;
+    border-color: var(--border-info-color) !important;
+  }
+  .event-listings-theme .badge.rounded-pill.bg-light.text-dark{
+    background: var(--theme-bg-light) !important;
+    color: var(--heading-color) !important;
+    border-color: var(--border-info-color) !important;
+  }
+  .event-listings-theme .seller-sub,
+  .event-listings-theme .price-break,
+  .event-listings-theme .small.text-muted{
+    color: var(--body-text-color);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <!-- BREADCRUMB -->
@@ -25,7 +50,7 @@
 </div>
 {% endif %}
 
-<main class="main">
+<main class="main event-listings-theme">
 
   <!-- HEADER EVENTO -->
   <section class="py-80">
@@ -176,23 +201,6 @@
               {% if l.notes %}
                 <div class="alert alert-light border mt-3 mb-0">
                   <strong>Annuncio del rivenditore:</strong> {{ l.notes }}
-                </div>
-              {% endif %}
-
-              {% if l.public_subitems %}
-                <div class="mt-3">
-                  <div class="small fw-semibold mb-2">Biglietti selezionati dal venditore</div>
-                  <div class="d-flex flex-column gap-2">
-                    {% for s in l.public_subitems %}
-                      <div class="border rounded-3 px-3 py-2 bg-white">
-                        <div class="fw-semibold">{{ s.full_name|default:'Nominativo non trovato' }}</div>
-                        <div class="small text-muted">
-                          {{ s.code_type|default:'CODE' }} {{ s.code_value|default:'—' }}
-                          {% if s.price %} • € {{ s.price }}{% endif %}
-                        </div>
-                      </div>
-                    {% endfor %}
-                  </div>
                 </div>
               {% endif %}
 

@@ -160,6 +160,7 @@ body.account .card-ghost{
 @media (max-width:991.98px){
   .account .account-sidebar{ margin-bottom:18px; }
   .account .account-sidebar.open{ margin-bottom: 1.5rem; }
+  .account .account-sidebar{ position: static; top: auto; }
 }
 
 
@@ -431,6 +432,60 @@ body.account.dark .badge-soft{
 .theme-dark .orders-table thead th,
 .dark-mode  .orders-table thead th,
 body.dark   .orders-table thead th{ color:#e5e7eb; }
+
+
+/* ========== 15) Theme fixes for legacy light-only surfaces ========== */
+
+.account-profile .verify-badge--ok,
+.account-profile .verify-badge--warn{
+  color: var(--heading-color);
+}
+.account-profile .verify-list .item{
+  border-bottom-color: var(--border-info-color);
+}
+.account-profile .kbd{
+  background: var(--theme-bg-light);
+  border-color: var(--border-info-color);
+  color: var(--heading-color);
+}
+
+.account .listing-edit-card,
+.account .listing-edit-option,
+.account .resale-upload-loading__box,
+.account .resale-upload-form .alert-light,
+.account .resale-upload-form .bg-white,
+.account .event-listings-theme .seller-card,
+.account .event-listings-theme .seller-card[style],
+.account .event-listings-theme .bg-white{
+  background: var(--theme-bg-light) !important;
+  border-color: var(--border-info-color) !important;
+  color: var(--heading-color) !important;
+}
+
+.account .listing-edit-option__meta,
+.account .resale-upload-loading__text,
+.account .resale-upload-loading__title,
+.account .event-listings-theme .seller-sub,
+.account .event-listings-theme .price-break,
+.account .event-listings-theme .small.text-muted{
+  color: var(--body-text-color);
+}
+
+.account .resale-upload-loading{
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.theme-dark .account .resale-upload-loading,
+.dark-theme .account .resale-upload-loading,
+.dark-mode .account .resale-upload-loading,
+body.account.dark .resale-upload-loading{
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.account .resale-upload-loading__spinner{
+  border-color: var(--border-info-color);
+  border-top-color: var(--theme-color2);
+}
 
 
 /* ========== 14) Responsive micro-ritocchi ========== */

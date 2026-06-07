@@ -2527,6 +2527,7 @@ def account_resales_view(request):
             "download_url": download_url,  # può essere None
             "selected_subitem_ids": [str(x) for x in (r.get("selected_subitem_ids") or [])],
             "editable_subitems": r.get("editable_subitems") or [],
+            "sale_details": r.get("sale_details") or {},
             "is_edit_open": str(r.get("id")) == open_edit_listing_id,
         })
 
@@ -3304,4 +3305,10 @@ def api_search_performances(request):
         
     except Exception as e:
         return JsonResponse({"error": str(e), "results": []}, status=500)
+
+
+@require_GET
+def chrome_devtools_probe(request):
+    """Risposta innocua per il probe di Chrome DevTools."""
+    return JsonResponse({}, status=200)
 

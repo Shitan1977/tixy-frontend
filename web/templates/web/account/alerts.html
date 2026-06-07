@@ -12,7 +12,7 @@
 <!-- HERO -->
 <section class="account-hero account-hero--sm account-hero--overlay"
          style="background-image:url({% static 'assets/img/breadcrumb/01.jpg' %});">
-    <div class="container d-flex align-items-center justify-content-between">
+    <div class="container d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
         <div>
             <h1 class="m-0 account-hero__title">I miei Alert</h1>
             <p class="subtitle m-0 account-hero__subtitle">Alert gratuiti attivi su biglietti / eventi</p>
@@ -46,7 +46,7 @@
                         <a class="nav-item active" href="{% url 'account_tickets' %}" data-route="acquisti">
                             <i class="far fa-bag-shopping"></i> Acquisti
                         </a>
-                        <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita"><i
+                        <a class="nav-item" href="{% url 'account_resales' %}" data-route="rivendita">
                             <i class="far fa-tags"></i> Rivendita
                         </a>
                         <a class="nav-item" href="{% url 'account_support_list' %}" data-route="assistenza">
