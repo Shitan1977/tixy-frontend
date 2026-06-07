@@ -11,12 +11,20 @@
       <p class="text-muted">Riepilogo prima del pagamento.</p>
 
       <ul class="list-unstyled mb-3">
+        <li><strong>Piano:</strong> {{ plan_name }}</li>
         <li><strong>Evento ID:</strong> {{ event_id }}</li>
         <li><strong>Periodo:</strong>
-          {% if periodo == "evento" %}Fino all’evento ({{ giorni }} giorni)
+          {% if periodo == "evento_daily" %}Fino al giorno prima dell'evento ({{ giorni }} giorni)
+          {% elif periodo == "evento" %}Fino all’evento ({{ giorni }} giorni)
           {% else %}{{ mesi }} mese{% if mesi != 1 %}i{% endif %} ({{ giorni }} giorni)
           {% endif %}
         </li>
+        {% if periodo == "evento_daily" and daily_rate %}
+        <li><strong>Tariffa:</strong> € {{ daily_rate }} x {{ giorni }} giorni</li>
+        {% endif %}
+        {% if event_date_fmt %}
+        <li><strong>Data evento:</strong> {{ event_date_fmt }}</li>
+        {% endif %}
         <li><strong>Prezzo:</strong> € {{ prezzo }}</li>
       </ul>
 

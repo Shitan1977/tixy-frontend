@@ -88,7 +88,7 @@
                                 </thead>
                                 <tbody>
                                 {% for it in page_obj.object_list %}
-                                {% with st=it.status|default:"attivo"|lower %}
+                                {% with st=it.status_code|default:it.status|default:"active"|lower %}
                                 <tr class="js-sub-row"
                                     data-filter-group="{% if st == 'chiuso' or st == 'closed' or st == 'off' or st == 'scaduto' or st == 'expired' %}closed_expired{% else %}active{% endif %}">
                                     <td>
@@ -128,13 +128,13 @@
 
                                     <td class="text-end text-nowrap">
                                         {% if st == "chiuso" or st == "closed" or st == "off" %}
-                                        <span class="badge badge-soft secondary">Chiuso</span>
+                                        <span class="badge badge-soft secondary">{{ it.status|default:"Chiuso" }}</span>
                                         {% elif st == "scaduto" or st == "expired" %}
-                                        <span class="badge badge-soft danger">Scaduto</span>
+                                        <span class="badge badge-soft danger">{{ it.status|default:"Scaduto" }}</span>
                                         {% elif st == "attivo" or st == "active" or st == "success" %}
-                                        <span class="badge badge-soft success">Attivo</span>
+                                        <span class="badge badge-soft success">{{ it.status|default:"Attivo" }}</span>
                                         {% else %}
-                                        <span class="badge badge-soft success">Attivo</span>
+                                        <span class="badge badge-soft success">{{ it.status|default:"Attivo" }}</span>
                                         {% endif %}
                                     </td>
                                 </tr>

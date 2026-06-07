@@ -196,6 +196,15 @@ def get_alert_plans():
     return _api_get("alert-plans/")
 
 
+def get_pro_plan_options(event_id: int | None = None, performance_id: int | None = None):
+    params = {}
+    if event_id:
+        params["event_id"] = event_id
+    if performance_id:
+        params["performance_id"] = performance_id
+    return _api_get("alert-plans/pro-options/", params=params or None)
+
+
 # ---------------------------
 # EVENT FOLLOW / PRO
 # ---------------------------
@@ -304,7 +313,8 @@ def api_pro_alert_status(token: str, event_id: int, event_title: str = None, per
 
 
 def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: str = "6.99",
-                           durata_giorni: int | None = None, periodo: str | None = None):
+                           durata_giorni: int | None = None, periodo: str | None = None,
+                           event_id: int | None = None, performance_id: int | None = None):
     """
     Crea un abbonamento (puoi passare plan_id oppure solo prezzo/durata_giorni).
     """
@@ -317,6 +327,10 @@ def api_abbonamento_create(token: str, *, plan_id: int | None = None, prezzo: st
     if periodo:
         # Passa il periodo per tracciamento ('1m', '3m', 'evento', ecc.)
         payload["periodo"] = periodo
+    if event_id:
+        payload["event_id"] = event_id
+    if performance_id:
+        payload["performance_id"] = performance_id
 
     base = _effective_api_base_url()
     url = f"{base}/abbonamenti/"

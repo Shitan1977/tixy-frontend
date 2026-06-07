@@ -24,11 +24,19 @@
         <div class="col-12 col-md-6">
           <div class="seller-card">
             <ul class="list-unstyled m-0">
+              <li><strong>Piano:</strong> {{ plan_name }}</li>
               <li><strong>Periodo:</strong>
-                {% if periodo == 'evento' %} Fino all’evento ({{ giorni }} giorni)
+                {% if periodo == 'evento_daily' %} Fino al giorno prima dell'evento ({{ giorni }} giorni)
+                {% elif periodo == 'evento' %} Fino all’evento ({{ giorni }} giorni)
                 {% else %} {{ mesi }} {% if mesi == 1 %}mese{% else %}mesi{% endif %} ({{ giorni }} giorni)
                 {% endif %}
               </li>
+              {% if periodo == 'evento_daily' and daily_rate %}
+              <li><strong>Tariffa:</strong> € {{ daily_rate }} x {{ giorni }} giorni</li>
+              {% endif %}
+              {% if event_date_fmt %}
+              <li><strong>Data evento:</strong> {{ event_date_fmt }}</li>
+              {% endif %}
               <li><strong>Prezzo:</strong> € {{ prezzo }}</li>
             </ul>
           </div>

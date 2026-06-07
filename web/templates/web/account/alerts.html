@@ -118,13 +118,13 @@
 
                                     <td class="text-nowrap">{{ a.expires_at|default:"—" }}</td>
 
-                                    <td class="text-nowrap">{{ a.expires_at|default:"—" }}</td>
-
                                     <td class="text-end">
                                         <div class="btn-group">
-                                            <form method="post" action="{% url 'alert_delete' a.id %}" class="d-inline"
-                                                  onsubmit="return confirm('Eliminare definitivamente questo alert?');">
+                                            <form method="post" action="{% url 'alert_delete' a.id %}" class="d-inline js-delete-alert-form"
+                                                  data-alert-title="{{ a.title|default:'questo alert'|escape }}"
+                                                  data-alert-kind="free">
                                                 {% csrf_token %}
+                                                <input type="hidden" name="alert_kind" value="free">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"
                                                         title="Elimina">
                                                     <i class="far fa-trash"></i>
@@ -190,6 +190,25 @@
         </div>
     </div>
 </section>
+
+<div class="modal fade" id="deleteAlertModal" tabindex="-1" aria-labelledby="deleteAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAlertModalLabel">Conferma annullamento alert</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Stai per annullare l'alert gratuito per <strong id="deleteAlertTitle">questo evento</strong>.</p>
+                <p class="text-muted mb-0 small">Non riceverai piu notifiche finche non lo attiverai di nuovo da una pagina evento.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Torna indietro</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAlertBtn">Annulla alert</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -225,6 +244,35 @@
 
       document.querySelectorAll('.nav-account a')
         .forEach(a => a.classList.toggle('active', a.dataset.route === key));
+
+            const modalEl = document.getElementById('deleteAlertModal');
+            const confirmBtn = document.getElementById('confirmDeleteAlertBtn');
+            const titleEl = document.getElementById('deleteAlertTitle');
+            let pendingForm = null;
+
+            if (modalEl && confirmBtn && titleEl && window.bootstrap) {
+                const modal = new bootstrap.Modal(modalEl);
+                document.querySelectorAll('.js-delete-alert-form').forEach(function(form){
+                    form.addEventListener('submit', function(event){
+                        event.preventDefault();
+                        pendingForm = form;
+                        titleEl.textContent = form.dataset.alertTitle || 'questo evento';
+                        modal.show();
+                    });
+                });
+
+                confirmBtn.addEventListener('click', function(){
+                    if (!pendingForm) return;
+                    const formToSubmit = pendingForm;
+                    pendingForm = null;
+                    modal.hide();
+                    formToSubmit.submit();
+                });
+
+                modalEl.addEventListener('hidden.bs.modal', function(){
+                    pendingForm = null;
+                });
+            }
     })();
 </script>
 

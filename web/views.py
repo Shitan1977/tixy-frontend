@@ -25,7 +25,7 @@ from .services.tixy_api import (
     api_event_follow_create, api_abbonamento_create, api_monitoraggio_create,
     api_get_profile, api_obtain_token, api_register_user, api_confirm_otp,
     api_event_follow_status, api_pro_alert_status, api_password_reset_start, api_password_reset_confirm,
-    get_top_listings, get_alert_plans,
+    get_top_listings, get_pro_plan_options,
     _api_request,  # usato in varie helper/view
 )
 
@@ -982,8 +982,10 @@ def attiva_pro(request):
         
         try:
             # Recupera il piano per ottenere i dettagli
-            alert_plans_data = get_alert_plans()
+            alert_plans_data = get_pro_plan_options(event_id=event_id, performance_id=performance_id)
             plans = alert_plans_data.get("results", alert_plans_data) if isinstance(alert_plans_data, dict) else alert_plans_data
+            if not isinstance(plans, list):
+                plans = []
             
             selected_plan = None
             for plan in plans:
@@ -995,16 +997,20 @@ def attiva_pro(request):
                 messages.error(request, "Piano non valido.")
                 return redirect(reverse("attiva_pro") + f"?event={event_id}" if event_id else "")
             
-            giorni = selected_plan.get("duration_days", 30)
+            giorni = int(selected_plan.get("duration_days", 30) or 30)
             prezzo = str(selected_plan.get("price", "6.99"))
+            periodo = (selected_plan.get("periodo") or "evento").strip().lower()
             
             request.session[PRO_SESSION_KEY] = {
                 "event_id": event_id,
                 "performance_id": performance_id,
                 "plan_id": plan_id,
                 "plan_name": selected_plan.get("name", ""),
+                "periodo": periodo,
                 "giorni": giorni,
                 "prezzo": prezzo,
+                "daily_rate": selected_plan.get("daily_rate"),
+                "event_date_fmt": selected_plan.get("event_date_fmt"),
                 "next": request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home"),
             }
             request.session.modified = True
@@ -1016,7 +1022,7 @@ def attiva_pro(request):
 
     # GET - recupera i piani alert dall'API
     try:
-        alert_plans_data = get_alert_plans()
+        alert_plans_data = get_pro_plan_options(event_id=event_id, performance_id=performance_id)
         
         if alert_plans_data is None:
             messages.warning(request, "La risposta dell'API è vuota. Verifica che il backend sia attivo.")
@@ -1097,9 +1103,12 @@ def pro_cart(request):
     event_id = data.get("event_id")
     performance_id = data.get("performance_id")
     plan_id = data.get("plan_id")
+    plan_name = data.get("plan_name") or "Piano PRO"
     periodo = (data.get("periodo") or "1m").strip().lower()
     giorni = int(data.get("giorni") or 30)
     prezzo = data.get("prezzo")
+    daily_rate = data.get("daily_rate")
+    event_date_fmt = data.get("event_date_fmt")
     next_url = data.get("next") or reverse("home")
 
     mesi = 0
@@ -1114,10 +1123,13 @@ def pro_cart(request):
             "event_id": event_id,
             "performance_id": performance_id,
             "plan_id": plan_id,
+            "plan_name": plan_name,
             "periodo": periodo,
             "mesi": mesi,
             "giorni": giorni,
             "prezzo": prezzo,
+            "daily_rate": daily_rate,
+            "event_date_fmt": event_date_fmt,
             "next": next_url,
         }
         request.session.modified = True
@@ -1127,10 +1139,13 @@ def pro_cart(request):
         "event_id": event_id,
         "performance_id": performance_id,
         "plan_id": plan_id,
+        "plan_name": plan_name,
         "periodo": periodo,
         "mesi": mesi,
         "giorni": giorni,
         "prezzo": prezzo,
+        "daily_rate": daily_rate,
+        "event_date_fmt": event_date_fmt,
         "prezzo_mese": PREZZO_MESE,
         "next": next_url,
     }
@@ -1150,10 +1165,13 @@ def pro_pagamento(request):
     event_id = data.get("event_id")
     performance_id = data.get("performance_id")
     plan_id = data.get("plan_id")
+    plan_name = data.get("plan_name") or "Piano PRO"
     periodo = data.get("periodo")
     mesi = data.get("mesi")
     giorni = int(data.get("giorni") or 30)
     prezzo = data.get("prezzo")
+    daily_rate = data.get("daily_rate")
+    event_date_fmt = data.get("event_date_fmt")
     next_url = data.get("next") or reverse("home")
 
     if request.method == "POST":
@@ -1169,6 +1187,8 @@ def pro_pagamento(request):
                 prezzo=str(prezzo),
                 durata_giorni=giorni,
                 periodo=periodo,
+                event_id=event_id,
+                performance_id=performance_id,
             )
             api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id, performance_id=performance_id)
 
@@ -1182,10 +1202,13 @@ def pro_pagamento(request):
     ctx = {
         "event_id": event_id,
         "plan_id": plan_id,
+        "plan_name": plan_name,
         "periodo": periodo,
         "mesi": mesi,
         "giorni": giorni,
         "prezzo": prezzo,
+        "daily_rate": daily_rate,
+        "event_date_fmt": event_date_fmt,
         "prezzo_mese": PREZZO_MESE,
         "next": next_url,
         "simulated": SIMULATED_PRO_PAYMENTS,
@@ -2078,46 +2101,29 @@ def rivendita(request):
 
 def _map_sub_status(item: dict) -> str:
     """
-    Stati: Attivo | Scaduto | Chiuso
+    Normalizza lo stato backend in etichetta UI: Attivo | Scaduto | Chiuso.
+    Non ricalcola lo stato da date locali per evitare drift rispetto all'API.
     """
     it = item or {}
-    status_raw = (it.get("status") or it.get("stato") or "").lower().strip()
+    status_raw = str(it.get("status") or it.get("stato") or "").strip().lower()
+    label_raw = str(it.get("status_label") or "").strip().lower()
 
-    # Se l'API ci passa gia un'etichetta "umana", normalizziamo eventuali Pending/Pedding ad Attivo.
-    if it.get("status_label"):
-        label = str(it["status_label"]).strip().lower()
-        if label in ("pending", "pedding"):
-            return "Attivo"
-        if label in ("active", "attivo"):
-            return "Attivo"
-        if label in ("expired", "scaduto"):
-            return "Scaduto"
-        if label in ("closed", "chiuso"):
-            return "Chiuso"
-        return str(it["status_label"])
-
-    # my-pro flat: status="active"
-    if status_raw in ("active", "attivo"):
-        return "Attivo"
-
-    expires = _safe_dt(it.get("expires_at") or it.get("scade_il") or it.get("valid_until"))
-    done_at = _safe_dt(it.get("done_at") or it.get("success_at") or it.get("notified_at"))
-
-    # date evento (da evento o performance)
-    ev = it.get("evento_info") or it.get("event_info") or {}
-    perf = it.get("performance_info") or {}
-    event_dt = _safe_dt(ev.get("starts_at_utc") or ev.get("starts_at") or perf.get("starts_at_utc"))
-
-    now = datetime.utcnow().replace(tzinfo=dt_timezone.utc)
-
-    if event_dt and event_dt < now:
-        return "Chiuso"
-    if expires and expires < now:
-        return "Scaduto"
-    # se c'e un esito "ok", lo consideriamo ancora attivo fino a scadenza/evento
-    if done_at or status_raw in ("success", "trovato", "completed", "ok"):
-        return "Attivo"
-    return "Attivo"
+    normalized = label_raw or status_raw
+    mapping = {
+        "pending": "Attivo",
+        "pedding": "Attivo",
+        "active": "Attivo",
+        "attivo": "Attivo",
+        "success": "Attivo",
+        "ok": "Attivo",
+        "completed": "Attivo",
+        "expired": "Scaduto",
+        "scaduto": "Scaduto",
+        "closed": "Chiuso",
+        "chiuso": "Chiuso",
+        "off": "Chiuso",
+    }
+    return mapping.get(normalized, str(it.get("status_label") or "").strip() or "Attivo")
 
 
 
@@ -2139,6 +2145,25 @@ def _api_subscriptions_list(token: str, page: int = 1, per_page: int = 20):
     for r in rows:
         ev = (r.get("evento_info") or r.get("event_info") or {})
         perf = (r.get("performance_info") or {})
+        status_code = str(r.get("status") or "").strip().lower()
+        status_label = str(r.get("status_label") or "").strip()
+
+        if not status_code and status_label:
+            status_code = {
+                "attivo": "active",
+                "scaduto": "expired",
+                "chiuso": "closed",
+            }.get(status_label.lower(), status_label.lower())
+
+        if not status_label:
+            status_label = _map_sub_status(r)
+
+        if not status_code:
+            status_code = {
+                "attivo": "active",
+                "scaduto": "expired",
+                "chiuso": "closed",
+            }.get(status_label.lower(), "active")
 
         # NUOVI CAMPI (my-pro "piatto") + fallback ai vecchi
         title = r.get("event_title") or r.get("title") or ev.get("nome") or ev.get("title") or "Evento"
@@ -2167,7 +2192,8 @@ def _api_subscriptions_list(token: str, page: int = 1, per_page: int = 20):
             "expires_at": _fmt_iso_dmy_hm(expires_iso),
             "event_date": _fmt_iso_dmy_hm(event_iso),
 
-            "status": _map_sub_status(r),
+            "status": status_label,
+            "status_code": status_code,
             "period": r.get("period_label") or r.get("durata_label") or "",
         }
 
@@ -3150,6 +3176,7 @@ def account_alerts_view(request):
         for m in rows:
             ev = (m.get("evento_info") or {})
             perf = (m.get("performance_info") or {})
+            status_label = str(m.get("status_label") or "").strip() or _map_sub_status(m)
             
             # Estrai la data dell'evento
             event_date = None
@@ -3165,7 +3192,7 @@ def account_alerts_view(request):
                 "type": "pro",
                 "created_at": _fmt_iso_dmy_hm(m.get("created_at") or ""),
                 "expires_at": _fmt_iso_dmy_hm(expires_iso),
-                "status": _map_sub_status(m),
+                "status": status_label,
             })
     except Exception:
         pass
@@ -3216,16 +3243,21 @@ def alert_resume_view(request, alert_id: int):
 
 @require_POST
 def alert_delete_view(request, alert_id: int):
-    """Elimina un alert PRO."""
+    """Elimina un alert gratuito o PRO."""
     guard = _require_api_login(request, next_url=request.get_full_path())
     if guard:
         return guard
 
     token = request.session.get(SESSION_TOKEN_KEY)
-    
+    alert_kind = (request.POST.get("alert_kind") or "pro").strip().lower()
+
     try:
-        _api_request("DELETE", f"monitoraggi/{alert_id}/", token=token, timeout=10)
-        messages.success(request, "Alert eliminato ✅")
+        if alert_kind == "free":
+            _api_request("DELETE", f"event-follows/{alert_id}/", token=token, timeout=10)
+            messages.success(request, "Alert gratuito annullato ✅")
+        else:
+            _api_request("DELETE", f"monitoraggi/{alert_id}/", token=token, timeout=10)
+            messages.success(request, "Alert eliminato ✅")
     except Exception as e:
         messages.error(request, f"Impossibile eliminare l'alert: {e}")
     
