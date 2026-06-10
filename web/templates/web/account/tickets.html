@@ -124,14 +124,18 @@
                         </td>
 
                         <td class="text-end">
-                          {% if t.download_href %}
+                          {% if t.is_downloadable %}
                             <a href="{{ t.download_href }}" class="btn btn-sm btn-primary">
-                              <i class="far fa-download me-1"></i> Download
+                              <i class="far fa-download me-1"></i> Scarica
                             </a>
+                          {% elif t.delivery_label %}
+                            <span class="badge bg-warning text-dark py-2 px-3">
+                              <i class="far fa-hourglass-half me-1"></i>{{ t.delivery_label }}
+                            </span>
                           {% else %}
-                            <a href="{% url 'ticket_download_proxy' t.order_id %}" class="btn btn-sm btn-primary">
-                              <i class="far fa-download me-1"></i> Download
-                            </a>
+                            <span class="badge bg-secondary py-2 px-3">
+                              <i class="far fa-circle-info me-1"></i> Non disponibile
+                            </span>
                           {% endif %}
                         </td>
                       </tr>

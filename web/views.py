@@ -2314,6 +2314,8 @@ def account_tickets_view(request):
             "qty": qty,
             "total": total_price,
             "currency": currency,
+            "is_downloadable": bool(r.get("is_downloadable", False)),
+            "delivery_label": r.get("delivery_label") or "",
             "download_href": download_href,
         })
 
@@ -2531,6 +2533,23 @@ def account_resales_view(request):
             "is_edit_open": str(r.get("id")) == open_edit_listing_id,
         })
 
+    # --- Ordini venduti in attesa di consegna biglietto ---
+    # Derivati da sale_details degli items già caricati (nessuna chiamata aggiuntiva)
+    seller_paid_orders = []
+    for item in items:
+        sd = item.get("sale_details") or {}
+        if sd and item.get("is_sold") and sd.get("order_id"):
+            seller_paid_orders.append({
+                "order_id": sd.get("order_id"),
+                "listing_id": item["id"],
+                "perf_name": item["perf_name"],
+                "venue": item["venue"],
+                "starts_fmt": item["starts_fmt"],
+                "buyer_name": sd.get("buyer_name") or "—",
+                "purchase_date": sd.get("purchase_date") or "—",
+                "seller_deadline": sd.get("seller_deadline"),
+            })
+
     return render(request, "web/account/resales.html", {
         "items": items,
         "count": int(data.get("count") or len(items)),
@@ -2539,6 +2558,7 @@ def account_resales_view(request):
         "perfs": perfs,
         "selected_performance": selected_performance,
         "open_edit_listing_id": open_edit_listing_id,
+        "seller_paid_orders": seller_paid_orders,
     })
 
 
@@ -3305,6 +3325,60 @@ def api_search_performances(request):
         
     except Exception as e:
         return JsonResponse({"error": str(e), "results": []}, status=500)
+
+
+@require_POST
+def api_cancel_listing(request, listing_id: int):
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return JsonResponse({"detail": "authentication required"}, status=401)
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+    try:
+        out = _api_request("POST", f"listings/{int(listing_id)}/cancel/", token=token, timeout=20) or {}
+        if not isinstance(out, dict):
+            out = {"detail": "ok"}
+        return JsonResponse(out, status=200)
+    except requests.HTTPError as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"detail": str(e)}, status=500)
+
+
+@require_POST
+def api_seller_upload(request, order_id: int):
+    """
+    Proxy: il venditore carica il biglietto aggiornato per un ordine PAID.
+    POST /api/orders/{id}/seller-upload/  (multipart: path_file)
+    """
+    guard = _require_api_login(request, next_url=request.get_full_path())
+    if guard:
+        return JsonResponse({"detail": "authentication required"}, status=401)
+
+    token = request.session.get(SESSION_TOKEN_KEY)
+    file_obj = request.FILES.get("path_file")
+    if not file_obj:
+        return JsonResponse({"detail": "Carica il PDF aggiornato (campo: path_file)"}, status=400)
+
+    base = settings.API_BASE_URL.rstrip("/")
+    url = f"{base}/orders/{int(order_id)}/seller-upload/"
+    try:
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            files={"path_file": (file_obj.name, file_obj.read(), file_obj.content_type or "application/pdf")},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return JsonResponse(resp.json(), status=200)
+    except requests.HTTPError as e:
+        try:
+            detail = e.response.json()
+        except Exception:
+            detail = {"detail": str(e)}
+        return JsonResponse(detail, status=e.response.status_code if e.response is not None else 400)
+    except Exception as e:
+        return JsonResponse({"detail": str(e)}, status=500)
 
 
 @require_GET

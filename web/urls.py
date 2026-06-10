@@ -80,5 +80,7 @@ urlpatterns = [
 
     # API proxy per autocomplete
     path('api/search/performances/', views.api_search_performances, name='api-search-performances'),
+    path('api/listings/<int:listing_id>/cancel/', views.api_cancel_listing, name='api-cancel-listing'),
+    path('api/orders/<int:order_id>/seller-upload/', views.api_seller_upload, name='api-seller-upload'),
 
 ]

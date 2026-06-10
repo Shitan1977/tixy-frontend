@@ -417,10 +417,98 @@
             {% endfor %}
           </div>
         </div>
+
+        {# ============ BIGLIETTI VENDUTI DA CONSEGNARE ============ #}
+        {% if seller_paid_orders %}
+          <div class="card card-ghost mt-3">
+            <div class="card-header d-flex align-items-center gap-2">
+              <i class="far fa-clock-rotate-left text-warning"></i>
+              <h4 class="m-0">Da consegnare</h4>
+              <span class="badge bg-warning text-dark ms-1">{{ seller_paid_orders|length }}</span>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-warning border mb-3">
+                <i class="far fa-triangle-exclamation me-1"></i>
+                Questi biglietti sono stati acquistati. Devi caricare il PDF aggiornato con
+                <strong>nome intestatario cambiato</strong> e <strong>sigillo fiscale cambiato</strong>
+                entro 24 ore dall'acquisto.
+              </div>
+              <div class="table-responsive">
+                <table class="table table-admin align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Ordine</th>
+                      <th>Evento</th>
+                      <th>Acquirente</th>
+                      <th>Data acquisto</th>
+                      <th>Azione</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for po in seller_paid_orders %}
+                      <tr id="pending-order-{{ po.order_id }}">
+                        <td><span class="badge bg-secondary">#{{ po.order_id }}</span></td>
+                        <td>
+                          <div class="fw-semibold">{{ po.perf_name|default:'Evento' }}</div>
+                          <div class="small text-muted">{{ po.venue|default:'' }}</div>
+                          {% if po.starts_fmt %}<div class="small text-muted">{{ po.starts_fmt }}</div>{% endif %}
+                        </td>
+                        <td>{{ po.buyer_name|default:'—' }}</td>
+                        <td>{{ po.purchase_date|default:'—' }}</td>
+                        <td>
+                          <button type="button"
+                                  class="btn btn-sm btn-warning seller-upload-btn"
+                                  data-order-id="{{ po.order_id }}"
+                                  title="Carica biglietto aggiornato">
+                            <i class="far fa-cloud-upload-alt me-1"></i> Carica biglietto
+                          </button>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
       </div><!-- /col-lg-9 -->
     </div>
   </div>
 </section>
+
+{# ===== MODALE UPLOAD BIGLIETTO VENDITORE ===== #}
+<div class="modal fade" id="sellerUploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="far fa-cloud-upload-alt me-2"></i>Carica biglietto aggiornato</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info border mb-3">
+          Carica il PDF del biglietto con il <strong>nome dell'acquirente</strong> e il
+          <strong>sigillo fiscale aggiornati</strong>. Una volta caricato,
+          l'acquirente riceverà una notifica e potrà scaricarlo dalla sua area riservata.
+        </div>
+        <div id="sellerUploadError" class="alert alert-danger border d-none"></div>
+        <div>
+          <label class="form-label">PDF biglietto aggiornato</label>
+          <input type="file" id="sellerUploadFile" class="form-control" accept="application/pdf">
+        </div>
+        <input type="hidden" id="sellerUploadOrderId" value="">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-warning" id="sellerUploadSubmit">
+          <i class="far fa-cloud-upload-alt me-1" id="sellerUploadIcon"></i>
+          <span id="sellerUploadLabel">Carica e consegna</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -526,6 +614,72 @@
       });
     });
   });
+
+  // ===== UPLOAD BIGLIETTO VENDITORE =====
+  const sellerModal = document.getElementById('sellerUploadModal');
+  const sellerFileInput = document.getElementById('sellerUploadFile');
+  const sellerOrderIdInput = document.getElementById('sellerUploadOrderId');
+  const sellerSubmitBtn = document.getElementById('sellerUploadSubmit');
+  const sellerLabel = document.getElementById('sellerUploadLabel');
+  const sellerIcon = document.getElementById('sellerUploadIcon');
+  const sellerError = document.getElementById('sellerUploadError');
+  const bsSellerModal = sellerModal ? new bootstrap.Modal(sellerModal) : null;
+
+  document.querySelectorAll('.seller-upload-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const orderId = this.getAttribute('data-order-id');
+      if (!sellerOrderIdInput || !bsSellerModal) return;
+      sellerOrderIdInput.value = orderId;
+      if (sellerFileInput) sellerFileInput.value = '';
+      if (sellerError) { sellerError.textContent = ''; sellerError.classList.add('d-none'); }
+      bsSellerModal.show();
+    });
+  });
+
+  if (sellerSubmitBtn) {
+    sellerSubmitBtn.addEventListener('click', async function() {
+      const orderId = sellerOrderIdInput ? sellerOrderIdInput.value : '';
+      const file = sellerFileInput ? sellerFileInput.files[0] : null;
+      if (!orderId || !file) {
+        if (sellerError) { sellerError.textContent = 'Seleziona un file PDF.'; sellerError.classList.remove('d-none'); }
+        return;
+      }
+      sellerSubmitBtn.disabled = true;
+      if (sellerLabel) sellerLabel.textContent = 'Caricamento…';
+      if (sellerIcon) sellerIcon.className = 'far fa-spinner-third fa-spin me-1';
+      if (sellerError) sellerError.classList.add('d-none');
+
+      const formData = new FormData();
+      formData.append('path_file', file);
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      try {
+        const resp = await fetch(`/api/orders/${orderId}/seller-upload/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrfToken },
+          body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          if (bsSellerModal) bsSellerModal.hide();
+          const row = document.getElementById(`pending-order-${orderId}`);
+          if (row) {
+            row.innerHTML = '<td colspan="5" class="text-center text-success py-3"><i class="far fa-check-circle me-2"></i> Biglietto consegnato. L\'acquirente è stato notificato.</td>';
+          }
+          setTimeout(() => location.reload(), 2500);
+        } else {
+          if (sellerError) { sellerError.textContent = data.detail || 'Errore durante il caricamento.'; sellerError.classList.remove('d-none'); }
+          sellerSubmitBtn.disabled = false;
+          if (sellerLabel) sellerLabel.textContent = 'Carica e consegna';
+          if (sellerIcon) sellerIcon.className = 'far fa-cloud-upload-alt me-1';
+        }
+      } catch (err) {
+        if (sellerError) { sellerError.textContent = 'Errore di connessione.'; sellerError.classList.remove('d-none'); }
+        sellerSubmitBtn.disabled = false;
+        if (sellerLabel) sellerLabel.textContent = 'Carica e consegna';
+        if (sellerIcon) sellerIcon.className = 'far fa-cloud-upload-alt me-1';
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}
