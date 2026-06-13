@@ -59,122 +59,143 @@
             </aside>
 
             <div class="col-lg-9">
+
+                <!-- Ultimi 5 abbonamenti PRO attivati -->
                 <div class="card card-ghost mb-3">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <div>
-                            <h4 class="m-0">Alert attivi</h4>
-                            <small class="text-muted">Gli alert PRO e Free attualmente in esecuzione</small>
+                            <h4 class="m-0">Ultimi abbonamenti attivati</h4>
+                            <small class="text-muted">Cronologia degli abbonamenti PRO più recenti</small>
                         </div>
+                        <a href="{% url 'account_subscriptions' %}" class="btn btn-sm btn-outline-secondary">
+                            Vedi tutti <i class="far fa-arrow-right ms-1"></i>
+                        </a>
                     </div>
                     <div class="card-body p-0">
-                        {% if active_alerts %}
+                        {% if recent_subscriptions %}
                         <div class="table-responsive">
                             <table class="table align-middle mb-0 table-admin">
                                 <thead>
                                 <tr>
                                     <th>Evento</th>
-                                    <th class="text-nowrap">Tipo</th>
+                                    <th class="text-nowrap">Tipologia</th>
+                                    <th class="text-nowrap">Data evento</th>
+                                    <th class="text-nowrap">Attivato il</th>
+                                    <th class="text-end text-nowrap">Stato</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {% for a in active_alerts %}
+                                {% for s in recent_subscriptions %}
+                                {% with sc=s.status_code|default:"active"|lower %}
                                 <tr>
                                     <td>
-                                        <span class="fw-semibold">{{ a.title|default:"Alert" }}</span>
-                                        {% if a.filters %}
-                                        <div class="small text-muted">{{ a.filters }}</div>
-                                        {% endif %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if s.cover %}
+                                            <img src="{{ s.cover }}" alt="" class="rounded"
+                                                 style="width:40px;height:40px;object-fit:cover;flex-shrink:0;">
+                                            {% else %}
+                                            <div class="rounded bg-light d-flex align-items-center justify-content-center"
+                                                 style="width:40px;height:40px;flex-shrink:0;">
+                                                <i class="far fa-calendar-star text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <span class="fw-semibold">{{ s.title|default:"Evento" }}</span>
+                                        </div>
                                     </td>
                                     <td class="text-nowrap">
-                                       {% if a.type|lower == "pro" %}
-                                        <span class="badge badge-soft success">PRO</span>
+                                        {% if s.period %}
+                                        <span class="badge badge-soft info">{{ s.period }}</span>
                                         {% else %}
-                                        <span class="badge badge-soft">FREE</span>
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-nowrap text-muted">
+                                        {% if s.event_date %}{{ s.event_date }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-nowrap text-muted">
+                                        {% if s.created_at %}{{ s.created_at }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        {% if sc == "closed" or sc == "off" or sc == "chiuso" %}
+                                        <span class="badge badge-soft secondary">Chiuso</span>
+                                        {% elif sc == "expired" or sc == "scaduto" %}
+                                        <span class="badge badge-soft danger">Scaduto</span>
+                                        {% else %}
+                                        <span class="badge badge-soft success">Attivo</span>
                                         {% endif %}
                                     </td>
                                 </tr>
+                                {% endwith %}
                                 {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                         {% else %}
-                        <div class="p-4 text-muted">Non hai alert attivi.</div>
+                        <div class="p-4 text-muted">Nessun abbonamento PRO attivato.</div>
                         {% endif %}
                     </div>
                 </div>
 
+                <!-- 4 card riepilogo -->
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <!-- Alert gratuiti -->
+                    <div class="col-6 col-md-3">
                         <div class="card card-ghost h-100">
-                            <div class="card-header"><h5 class="m-0"><i class="far fa-bell me-2"></i>Alert gratuiti</h5>
-                            </div>
-                            <div class="card-body d-flex flex-column justify-content-center text-center">
+                            <div class="card-header"><h6 class="m-0"><i class="far fa-bell me-2"></i>Alert gratuiti</h6></div>
+                            <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
                                 <div class="display-5 fw-bold">{{ free_alerts_count|default:0 }}</div>
-                                <div class="mt-2 text-muted">Totale attivi (Free)</div>
+                                <div class="small text-muted mt-2">Attivi (Free)</div>
+                                <a href="{% url 'account_alerts' %}" class="btn btn-sm btn-link mt-2 p-0">Vedi alert</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-4">
+                    <!-- Abbonamenti attivi -->
+                    <div class="col-6 col-md-3">
                         <div class="card card-ghost h-100">
-                            <div class="card-header"><h5 class="m-0"><i class="far fa-crown me-2"></i>Abbonamenti attivi</h5>
-                            </div>
-                            <div class="card-body d-flex flex-column justify-content-center text-center">
+                            <div class="card-header"><h6 class="m-0"><i class="far fa-crown me-2"></i>Abbonamenti PRO</h6></div>
+                            <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
                                 <div class="display-5 fw-bold">{{ active_subscriptions_count|default:0 }}</div>
-                                <div class="mt-2 text-muted">PRO attivi</div>
+                                <div class="small text-muted mt-2">Attivi</div>
+                                <a href="{% url 'account_subscriptions' %}" class="btn btn-sm btn-link mt-2 p-0">Vedi abbonamenti</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-4">
+                    <!-- Ultimo biglietto acquistato -->
+                    <div class="col-6 col-md-3">
                         <div class="card card-ghost h-100">
-                            <div class="card-header"><h5 class="m-0"><i class="far fa-bag-shopping me-2"></i>Ultimo
-                                biglietto acquistato</h5></div>
-                            <div class="card-body">
+                            <div class="card-header"><h6 class="m-0"><i class="far fa-bag-shopping me-2"></i>Ultimo acquisto</h6></div>
+                            <div class="card-body d-flex flex-column justify-content-center">
                                 {% if last_ticket %}
-                                <ul class="list-unstyled m-0">
-                                    <li class="d-flex justify-content-between py-1"><span><strong>Ordine</strong></span><span
-                                            class="text-muted">#{{ last_ticket.order_id }}</span></li>
-                                    {% if last_ticket.listing_title %}
-                                    <li class="d-flex justify-content-between py-1">
-                                        <span><strong>Listing</strong></span><span class="text-muted">{{ last_ticket.listing_title }}</span>
-                                    </li>
-                                    {% endif %}
-                                    {% if last_ticket.event_title %}
-                                    <li class="d-flex justify-content-between py-1"><span><strong>Evento</strong></span><span
-                                            class="text-muted">{{ last_ticket.event_title }}</span></li>
-                                    {% endif %}
-                                    {% if last_ticket.event_date_fmt %}
-                                    <li class="d-flex justify-content-between py-1">
-                                        <span><strong>Data evento</strong></span><span class="text-muted">{{ last_ticket.event_date_fmt }}</span>
-                                    </li>
-                                    {% endif %}
-                                    {% if last_ticket.price %}
-                                    <li class="d-flex justify-content-between py-1"><span><strong>Prezzo</strong></span><span
-                                            class="text-muted">€ {{ last_ticket.price }}</span></li>
-                                    {% endif %}
-                                    {% if last_ticket.created_fmt %}
-                                    <li class="d-flex justify-content-between py-1"><span><strong>Acquistato il</strong></span><span
-                                            class="text-muted">{{ last_ticket.created_fmt }}</span></li>
-                                    {% endif %}
-                                </ul>
+                                <div class="fw-semibold text-truncate mb-1" title="{{ last_ticket.event_title }}">
+                                    {{ last_ticket.event_title|default:"—" }}
+                                </div>
+                                {% if last_ticket.starts_fmt %}
+                                <div class="small text-muted">{{ last_ticket.starts_fmt }}</div>
+                                {% elif last_ticket.event_date_fmt %}
+                                <div class="small text-muted">{{ last_ticket.event_date_fmt }}</div>
+                                {% endif %}
+                                {% if last_ticket.created_fmt %}
+                                <div class="small text-muted mt-1">Acquistato: {{ last_ticket.created_fmt }}</div>
+                                {% endif %}
+                                <a href="{% url 'account_tickets' %}" class="btn btn-sm btn-link mt-2 p-0">Vedi acquisti</a>
                                 {% else %}
-                                <div class="text-muted">Nessun acquisto trovato.</div>
+                                <div class="small text-muted">Nessun acquisto.</div>
+                                <a href="{% url 'account_tickets' %}" class="btn btn-sm btn-link mt-2 p-0">Vedi acquisti</a>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="row g-3 mt-2">
-                    <div class="col-md-4">
+                    <!-- Biglietti in vendita -->
+                    <div class="col-6 col-md-3">
                         <div class="card card-ghost h-100">
-                            <div class="card-header"><h5 class="m-0"><i class="far fa-ticket me-2"></i>Biglietti in vendita</h5>
-                            </div>
-                            <div class="card-body d-flex flex-column justify-content-center text-center">
+                            <div class="card-header"><h6 class="m-0"><i class="far fa-tags me-2"></i>In vendita</h6></div>
+                            <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
                                 <div class="display-5 fw-bold">{{ my_listings_available|default:0 }}</div>
-                                <div class="mt-2 text-muted">Totale disponibili</div>
-                                <a href="{% url 'account_resales' %}" class="btn btn-sm btn-link mt-3">Gestisci annunci</a>
+                                <div class="small text-muted mt-2">Biglietti disponibili</div>
+                                <a href="{% url 'account_resales' %}" class="btn btn-sm btn-link mt-2 p-0">Gestisci</a>
                             </div>
                         </div>
                     </div>

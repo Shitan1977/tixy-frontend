@@ -1447,6 +1447,10 @@ def account_admin(request):
     last_ticket = _get_last_order(token)               # ultimo ordine pagato
     my_listings_available = _get_my_listings_available_count(token)  # biglietti in vendita
 
+    # Ultimi 5 abbonamenti PRO attivati (ordinati per data attivazione decrescente)
+    recent_subscriptions, _ = _api_subscriptions_list(token, page=1, per_page=5)
+    recent_subscriptions = recent_subscriptions[:5]
+
     ctx = {
         "profilo": profilo,
         "active_alerts": active_alerts,
@@ -1454,6 +1458,7 @@ def account_admin(request):
         "active_subscriptions_count": active_subscriptions_count,
         "last_ticket": last_ticket,
         "my_listings_available": my_listings_available,
+        "recent_subscriptions": recent_subscriptions,
     }
     return render(request, "web/admin.html", ctx)
 
@@ -2180,7 +2185,7 @@ def _api_subscriptions_list(token: str, page: int = 1, per_page: int = 20):
         item = {
             "id": r.get("id"),
             "title": title,
-            "cover": ev.get("cover_url") or None,
+            "cover": r.get("cover_url") or ev.get("cover_url") or ev.get("immagine_url") or None,
 
             # RAW
             "created_at_iso": created_iso,
@@ -2215,7 +2220,7 @@ def account_subscriptions_view(request):
 
     items, total = _api_subscriptions_list(token, page=page, per_page=per_page)
     paginator = Paginator(items, per_page)
-    page_obj = paginator.get_page(1)  # l'API è già paginata
+    page_obj = paginator.get_page(page)
 
     return render(request, "web/account/subscriptions.html", {
         "page_obj": page_obj,
