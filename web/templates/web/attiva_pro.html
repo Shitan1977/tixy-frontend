@@ -55,22 +55,19 @@
         <div class="col-12">
           <div class="seller-card p-3">
             <div class="row g-2">
-              {% for m in months %}
+              {% for p in plans %}
               <div class="col-6 col-md-3">
                 <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
-                  <input class="form-check-input me-1" type="radio" name="periodo" value="{{ m }}m" {% if forloop.first %}checked{% endif %}>
-                  <strong>{{ m }} {% if m == 1 %}mese{% else %}mesi{% endif %}</strong><br>
-                  <small class="text-muted js-price" data-months="{{ m }}" data-base="{{ prezzo_mese|default:6.99 }}">€ —</small>
+                  <input class="form-check-input me-1" type="radio" name="periodo" value="{{ p.periodo }}" {% if forloop.first %}checked{% endif %}>
+                  <strong>{{ p.label }}</strong><br>
+                  {% if p.periodo == 'evento' %}
+                  <small class="text-muted">Durata standard {{ p.giorni }} giorni • € {{ p.prezzo }}</small>
+                  {% else %}
+                  <small class="text-muted">{{ p.giorni }} giorni • € {{ p.prezzo }}</small>
+                  {% endif %}
                 </label>
               </div>
               {% endfor %}
-              <div class="col-12 col-md-3">
-                <label class="d-block border rounded p-2 h-100" style="cursor:pointer;">
-                  <input class="form-check-input me-1" type="radio" name="periodo" value="evento">
-                  <strong>Fino a fine evento</strong><br>
-                  <small class="text-muted">Durata standard 60 giorni • € {{ prezzo_mese|default:6.99 }}</small>
-                </label>
-              </div>
             </div>
           </div>
         </div>
@@ -90,7 +87,7 @@
         <div class="seller-card p-4 h-100">
           <h5 class="mb-2">Come funziona</h5>
           <ol class="m-0 ps-3 text-muted">
-            <li class="mb-1">Seleziona la durata (1–12 mesi o fino a fine evento)</li>
+            <li class="mb-1">Seleziona la durata (1, 3, 6 o 12 mesi, oppure fino a fine evento)</li>
             <li class="mb-1">Conferma il pagamento</li>
             <li class="mb-0">Ti avvisiamo appena troviamo biglietti o cali di prezzo</li>
           </ol>
@@ -111,13 +108,8 @@
 
 <script>
 (function(){
-  // calcolo prezzi 1–12 mesi
-  document.querySelectorAll('.js-price').forEach(function(el){
-    var b = parseFloat(el.dataset.base || '6.99');
-    var m = parseInt(el.dataset.months || '1', 10);
-    if (!isNaN(b) && !isNaN(m)) el.textContent = '€ ' + (b * m).toFixed(2);
-  });
-  // evita doppi invii
+  // I prezzi sono ora forniti dal server (piani reali), niente calcolo lato client.
+  // Evita doppi invii del form.
   var form = document.getElementById('proForm');
   if (form) form.addEventListener('submit', function(){
     var btn = document.getElementById('btnPro');

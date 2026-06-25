@@ -47,6 +47,26 @@ SIMULATED_PRO_PAYMENTS = True  # quando avremo Stripe/PayPal mettiamo False
 # Prezzi/Fee
 PREZZO_MESE = Decimal("6.99")
 DEFAULT_FEE_PERCENT = Decimal("10.0")  # 10%
+
+# --- Piani PRO: unica fonte di verità, allineata alla tabella AlertPlan del backend ---
+# La chiave è il valore "periodo" inviato dal form. "plan_id" = AlertPlan.id sul backend.
+# Questo elimina alla radice il bug plan=NULL: alla creazione passiamo SEMPRE plan_id.
+# NB: se in futuro i piani cambiano lato backend, aggiornare questa mappa (o esporre
+# un endpoint /plans/ e leggerli dinamicamente).
+PRO_PLANS = {
+    "1m":     {"plan_id": 15, "label": "1 mese",          "mesi": 1,  "giorni": 30,  "prezzo": Decimal("6.99")},
+    "3m":     {"plan_id": 4,  "label": "3 mesi",          "mesi": 3,  "giorni": 90,  "prezzo": Decimal("20.97")},
+    "6m":     {"plan_id": 7,  "label": "6 mesi",          "mesi": 6,  "giorni": 180, "prezzo": Decimal("41.94")},
+    "12m":    {"plan_id": 13, "label": "12 mesi",         "mesi": 12, "giorni": 360, "prezzo": Decimal("83.88")},
+    "evento": {"plan_id": 14, "label": "Fino all'evento", "mesi": 0,  "giorni": 60,  "prezzo": Decimal("6.99")},
+}
+# Ordine di visualizzazione nella UI
+PRO_PLANS_ORDER = ["1m", "3m", "6m", "12m", "evento"]
+
+
+def _get_pro_plan(periodo: str):
+    """Ritorna il dict del piano PRO per il 'periodo' dato, o None se non valido."""
+    return PRO_PLANS.get((periodo or "").strip().lower())
 DEFAULT_FEE_FLAT = None               # nessuna fee flat
 
 # Pagamenti “ticket” simulati
@@ -900,33 +920,29 @@ def attiva_pro(request):
         event_id = 0
 
     if request.method == "POST":
-        periodo = request.POST.get("periodo")  # '1m'|'2m'|...|'12m'|'evento'
-        if periodo == "evento":
-            months = None
-            giorni = 60
-            prezzo = 6.99
-        else:
-            try:
-                months = int(periodo.replace("m", "")) if periodo else 1
-            except Exception:
-                months = 1
-            giorni = 30 * months
-            prezzo = round(6.99 * months, 2)
+        periodo = request.POST.get("periodo")  # '1m'|'3m'|'6m'|'12m'|'evento'
+        plan = _get_pro_plan(periodo)
+        if not plan:
+            messages.error(request, "Piano non valido. Scegli una delle durate disponibili.")
+            return redirect(request.get_full_path())
 
         request.session[PRO_SESSION_KEY] = {
             "event_id": event_id,
             "periodo": periodo,
-            "giorni": giorni,
-            "prezzo": str(prezzo),
+            "plan_id": plan["plan_id"],
+            "giorni": plan["giorni"],
+            "prezzo": str(plan["prezzo"]),
             "next": request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home"),
         }
         request.session.modified = True
         return redirect(reverse("pro_cart"))
 
+    # Solo i piani realmente esistenti lato backend (allineati ad AlertPlan)
+    plans = [dict(periodo=k, **PRO_PLANS[k]) for k in PRO_PLANS_ORDER]
     ctx = {
         "event_id": event_id,
-        "prezzo_mese": 6.99,
-        "months": list(range(1, 13)),
+        "prezzo_mese": PREZZO_MESE,
+        "plans": plans,
         "next": request.GET.get("next") or reverse("home"),
     }
     return render(request, "web/attiva_pro.html", ctx)
@@ -984,21 +1000,22 @@ def pro_cart(request):
 
     event_id = data.get("event_id")
     periodo = (data.get("periodo") or "1m").strip().lower()
-    giorni = int(data.get("giorni") or 30)
-    prezzo = data.get("prezzo")
-    next_url = data.get("next") or reverse("home")
+    plan = _get_pro_plan(periodo)
+    if not plan:
+        messages.error(request, "Carrello PRO non valido o scaduto.")
+        return redirect("attiva_pro")
 
-    mesi = 0
-    if periodo.endswith("m"):
-        try:
-            mesi = int(periodo[:-1])
-        except Exception:
-            mesi = 1
+    plan_id = data.get("plan_id") or plan["plan_id"]
+    giorni = int(data.get("giorni") or plan["giorni"])
+    prezzo = data.get("prezzo") or str(plan["prezzo"])
+    next_url = data.get("next") or reverse("home")
+    mesi = plan["mesi"]
 
     if request.method == "POST":
         request.session[SESSION_PRO_CHECKOUT] = {
             "event_id": event_id,
             "periodo": periodo,
+            "plan_id": plan_id,
             "mesi": mesi,
             "giorni": giorni,
             "prezzo": prezzo,
@@ -1036,6 +1053,10 @@ def pro_pagamento(request):
     prezzo = data.get("prezzo")
     next_url = data.get("next") or reverse("home")
 
+    # plan_id dalla sessione; fallback robusto risolvendo dal periodo (mai None)
+    plan = _get_pro_plan(periodo)
+    plan_id = data.get("plan_id") or (plan["plan_id"] if plan else None)
+
     if request.method == "POST":
         token = request.session.get(SESSION_TOKEN_KEY)
         try:
@@ -1043,7 +1064,11 @@ def pro_pagamento(request):
                 messages.error(request, "Pagamento reale non configurato.")
                 return redirect(request.path)
 
-            abb = api_abbonamento_create(token, prezzo=str(prezzo), durata_giorni=giorni)
+            if not plan_id:
+                messages.error(request, "Piano non valido. Ricomincia la scelta dell'abbonamento.")
+                return redirect("attiva_pro")
+
+            abb = api_abbonamento_create(token, plan_id=plan_id, prezzo=str(prezzo), durata_giorni=giorni)
             api_monitoraggio_create(token, abbonamento_id=abb["id"], event_id=event_id)
 
             request.session.pop(SESSION_PRO_CHECKOUT, None)
