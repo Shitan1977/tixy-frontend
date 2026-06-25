@@ -13,3 +13,5 @@ staticfiles/
 .idea/
 .vscode/
 *.log
+*.patch
+test_fix_*.py
